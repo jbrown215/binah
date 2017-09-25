@@ -1,4 +1,3 @@
-
 {-@ LIQUID "--exact-data-con"                      @-}
 {-@ LIQUID "--higherorder"                         @-}
 {-@ LIQUID "--no-termination"                      @-}
@@ -55,18 +54,22 @@ filter _ []     = []
 {- I don't think evalQ is generalizable -}
 
 {-@ reflect evalQBlobXVal @-}
-evalQBlobXVal :: Int -> Int -> Bool
-evalQBlobXVal filter given = filter == given
+evalQBlobXVal :: PersistFilter -> Int -> Int -> Bool
+evalQBlobXVal EQUAL filter given = filter == given
+evalQBlobXVal LE filter given = given <= filter
+evalQBlobXVal GE filter given = given <= filter
 
 {-@ reflect evalQBlobYVal @-}
-evalQBlobYVal :: Int -> Int -> Bool
-evalQBlobYVal filter given = filter == given
+evalQBlobYVal :: PersistFilter -> Int -> Int -> Bool
+evalQBlobYVal EQUAL filter given = filter == given
+evalQBlobYVal LE filter given = given <= filter
+evalQBlobYVal GE filter given = given <= filter
 
 {-@ reflect evalQBlob @-}
 evalQBlob :: Filter Blob typ -> Blob -> Bool
 evalQBlob filter blob = case filterField filter of
-    BlobXVal -> evalQBlobXVal (filterValue filter) (xVal blob)
-    BlobYVal -> evalQBlobYVal (filterValue filter) (yVal blob)
+    BlobXVal -> evalQBlobXVal (filterFilter filter) (filterValue filter) (xVal blob)
+    BlobYVal -> evalQBlobYVal (filterFilter filter) (filterValue filter) (yVal blob)
 
 {-@ filterQBlob :: f:(Filter Blob a) -> [Blob] -> [{b:Blob | evalQBlob f b}] @-}
 filterQBlob :: Filter Blob a -> [Blob] -> [Blob]
