@@ -1,4 +1,3 @@
-{-@ LIQUID "--exact-data-con"                      @-}
 {-@ LIQUID "--higherorder"                         @-}
 {-@ LIQUID "--no-termination"                      @-}
 {-@ LIQUID "--automatic-instances=liquidinstances" @-}
@@ -21,7 +20,7 @@ instance PersistEntity Blob where
 {-@ data Blob  = B { xVal :: {v:Int | v >= 0}, yVal :: Int } @-}
 data Blob  = B { xVal :: Int, yVal :: Int }
 
-{-@ data Update record typ = Update { updateField :: EntityField record typ, updateValue :: typ } @-}
+{-@ data Update record typ <p :: typ -> Bool> = Update { updateField :: EntityField record typ<p>, updateValue :: typ<p> } @-}
 data Update record typ = Update 
     { updateField :: EntityField record typ
     , updateValue :: typ
@@ -36,3 +35,6 @@ createUpdate field value = Update {
 
 testUpdateQuery :: () -> Update Blob Int
 testUpdateQuery () = createUpdate BlobXVal 3
+
+testUpdateQueryFail :: () -> Update Blob Int
+testUpdateQueryFail () = createUpdate BlobXVal (-1)
