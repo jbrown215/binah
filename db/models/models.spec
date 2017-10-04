@@ -7,5 +7,5 @@ data Blob = Blob { blobXVal :: {x:Int | x >= 0}
 
 {-@ data EntityField Blob typ where
     BlobXVal :: EntityField Blob {x:Int | x >= 0}
-    BlobYVal :: EntityField b:Blob {y:Int | y >= (blobYVal b)}
+    BlobYVal :: EntityField b:Blob {y:Int | y >= (blobXVal b)}
 @-}
