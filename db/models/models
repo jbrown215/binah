@@ -1,0 +1,4 @@
+{-- This would be generated using Jeanne's tool, which strips refinements from refined-models --}
+Blob
+    xVal Int
+    yVal Int

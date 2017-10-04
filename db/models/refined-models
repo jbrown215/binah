@@ -1,0 +1,3 @@
+Blob
+    xVal {x:Int | x >= 0}
+    yVal {y:Int | y >= blobXVal}
