@@ -26,6 +26,8 @@ data Update record typ = Update
     , updateValue :: typ
     } 
 
+{-@ data variance Update covariant covariant contravariant @-}
+
 {-@ createUpdate :: forall a <p :: a -> Bool>. EntityField record a<p> -> a<p> -> Update record a<p> @-}
 createUpdate :: EntityField record a -> a -> Update record a
 createUpdate field value = Update {
