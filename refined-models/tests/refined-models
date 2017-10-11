@@ -1,0 +1,25 @@
+Blob
+    xVal {x:Int | x >= 0}
+    yVal {y:Int | y >= blobXVal}
+    deriving Show
+User
+    username Text
+    password ByteString
+    emailAddress Text
+    UniqueUsername emailAddress
+    verified {v : Bool | userReviewer == userPc}
+    verifyKey Text
+    resetPasswordKey Text
+    reviewer Bool
+    pc Bool
+    deriving Show
+    deriving Eq
+    deriving Ord
+Review
+    paper    PaperId
+    user     UserId
+    status   PaperStatus
+    comments Text
+Conflict
+    paper PaperId
+    user  UserId
