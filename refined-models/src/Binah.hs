@@ -1,5 +1,8 @@
 module Binah where
 
+import ModelsParser
+import Models
+
 import Control.Monad
 import Data.Char
 import Data.List
@@ -17,6 +20,7 @@ data Flag =
 
 version = "0.0"
 help = "*TODO*"
+usage = "Usage is: binah [refined-models]"
 
 flags =
     [ Option ['v'] ["version"] (NoArg Version)
@@ -25,12 +29,17 @@ flags =
         "Prints the help page."
     ]
 
+runParser :: String -> IO ()
+runParser file = do stmts <- parseFile file
+                    mapM_ (putStr . prettyPrintStmt) stmts
+                    
+
 parse argv = case getOpt Permute flags argv of
     ([Version], _, []) -> putStrLn $ "Binah version " ++ version
     ([Help], _, []) -> putStrLn help 
-    _ -> putStrLn "Usage is: TODO"
+    ([], [file], []) -> runParser file 
+    _ -> putStrLn usage
 
 run :: IO ()
-run = do
-    as <- getArgs
-    parse as
+run = do as <- getArgs
+         parse as
