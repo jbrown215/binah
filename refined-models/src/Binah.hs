@@ -21,7 +21,7 @@ data Flag =
 
 version = "0.0"
 help = "Usage: binah path/to/refined-models will generate the models file and models.spec file.\n"
-    ++ "Flags:"
+    ++ "Flags:\n"
     ++ "  -v     Print the version number\n"
     ++ "  -h     Print help information\n"
     ++ "  -p     Generate database program proofs\n"
