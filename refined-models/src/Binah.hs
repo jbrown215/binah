@@ -20,8 +20,12 @@ data Flag =
     deriving (Eq, Ord, Enum, Show, Bounded)
 
 version = "0.0"
-help = "*TODO*"
-usage = "Usage is: binah [refined-models]"
+help = "Usage: binah path/to/refined-models will generate the models file and models.spec file.\n"
+    ++ "Flags:"
+    ++ "  -v     Print the version number\n"
+    ++ "  -h     Print help information\n"
+    ++ "  -p     Generate database program proofs\n"
+usage = "Normal usage is: binah [refined-models]\nTry --help for other options."
 
 flags =
     [ Option ['v'] ["version"] (NoArg Version)
