@@ -1,7 +1,7 @@
 module Binah where
 
-import ModelsParser
 import Models
+import GenProofs
 
 import Control.Monad
 import Data.Char
@@ -14,8 +14,9 @@ import Text.Printf
 
 
 data Flag =
-      Version    -- -v
-    | Help       -- --help
+      Version    -- -v, --version
+    | Help       -- -h, --help
+    | Proofs     -- -p, --proofs
     deriving (Eq, Ord, Enum, Show, Bounded)
 
 version = "0.0"
@@ -27,17 +28,15 @@ flags =
         "Prints the version number."
     , Option ['h'] ["help"] (NoArg Help)
         "Prints the help page."
+    , Option ['p'] ["proofs"] (NoArg Proofs)
+        "Generates proofs for the models files."
     ]
-
-runParser :: String -> IO ()
-runParser file = do stmts <- parseFile file
-                    mapM_ (putStr . prettyPrintStmt) stmts
-                    
 
 parse argv = case getOpt Permute flags argv of
     ([Version], _, []) -> putStrLn $ "Binah version " ++ version
     ([Help], _, []) -> putStrLn help 
-    ([], [file], []) -> runParser file 
+    ([Proofs], [file], []) -> makeProofs file
+    ([], [file], []) -> makeModelsAndSpecFile file
     _ -> putStrLn usage
 
 run :: IO ()

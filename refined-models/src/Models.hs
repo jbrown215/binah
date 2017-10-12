@@ -9,6 +9,11 @@ import Data.Char (isSpace, toUpper, toLower)
 import qualified Data.Set as Set
 import ModelsParser
 
+toSimpleType :: Type -> SimpleType
+toSimpleType (Simple s) = s
+toSimpleType (Refined _ s _) = s
+
+
 makeRevGroups :: [Stmt] -> [Stmt] -> [[Stmt]]
 makeRevGroups [] acc = [acc]
 makeRevGroups (x:xs) acc = case x of
@@ -103,4 +108,3 @@ makeModelsAndSpecFile file = do stmts <- parseFile file
                                 writeFile (file ++ "simple-models") simpleModels
                                 writeFile (file ++ ".spec") specs
                                 return ()
-
