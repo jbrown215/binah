@@ -6,6 +6,7 @@ import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
 import qualified Text.ParserCombinators.Parsec.Token as Token
 import qualified Data.List.Split as Split
+import Data.List
 
 {- Table Datatype -}
 type Var = String
@@ -52,7 +53,7 @@ predicateString :: Parser Var
 predicateString = otherOp <|> identifier
 
 predicateSequence :: Parser [Var]
-predicateSequence = do list <- (sepBy1 predicateString whiteSpace)
+predicateSequence = do list <- (many1 predicateString)
                        return list
 
 refinedtype :: Parser Type
@@ -70,8 +71,8 @@ typ = (braces refinedtype)
         <|> simpletype 
 
 simpletype :: Parser Type
-simpletype = do typ <- identifier
-                return $ Simple typ
+simpletype = do typ <- many1 identifier
+                return $ Simple (intercalate " " typ)
                 
 {- Helpers for Parsing Derive Statements -}
 derive :: Parser Stmt
@@ -91,7 +92,7 @@ newtable = do var <- identifier
               return $ NewRecord var
 
 declaration :: Parser Stmt
-declaration = try field <|> newtable <|> derive
+declaration = (try field) <|> (try newtable) <|> derive
 
 {- Parsing -}
 whileParser :: Parser Stmt
@@ -109,4 +110,5 @@ parseExprs = (map parseString)
 parseFile :: String -> IO [Stmt]
 parseFile file = do program  <- readFile file
                     lines <- return $ Split.splitOn "\n" program
-                    return $ parseExprs lines
+                    parsed <- return $ parseExprs lines
+                    return parsed
