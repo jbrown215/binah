@@ -12,12 +12,12 @@ data World
 data Blob = Blob {xVal :: Int, yVal :: Int}
 
 
-{-@ measure cannonicalBlob :: Blob @-}
+{-@ measure canonicalBlob :: Blob @-}
 
-{-@ data Range = Range {lower :: {v:Int | v = (xVal cannonicalBlob)}, upper :: Int} @-}
+{-@ data Range = Range {lower :: {v:Int | v = (xVal canonicalBlob)}, upper :: Int} @-}
 data Range = Range {lower :: Int, upper :: Int}
 
-{-@ makeBlob :: () -> {b:Blob | xVal b == (xVal cannonicalBlob)} @-}
+{-@ makeBlob :: () -> {b:Blob | xVal b == (xVal canonicalBlob)} @-}
 makeBlob :: () -> Blob
 makeBlob () = Blob {xVal = 3, yVal = 4}
 
