@@ -93,18 +93,18 @@ formatTableData entrySet (NewRecord tableName : entries) =
 
 makeSpecType :: [Stmt] -> String
 makeSpecType stmts =
-  let (record, entries) = formatTableRecord stmts in
-    let tableData = (formatTableData entries) . (filter notDeriving) $ stmts in
-      record ++ "\n\n" ++ tableData
+  let (record, entries) = formatTableRecord stmts 
+      tableData = (formatTableData entries) . (filter notDeriving) $ stmts in
+    record ++ "\n\n" ++ tableData
 
 makeSpecFile :: [Stmt] -> String
-makeSpecFile stmts = let groups = makeGroups stmts in 
-                          intercalate "\n\n" (map makeSpecType groups)
+makeSpecFile stmts = let groups = makeGroups stmts in
+                       intercalate "\n\n" $ map makeSpecType groups
 
 makeModelsAndSpecFile :: String -> IO ()
 makeModelsAndSpecFile file = do stmts <- parseFile file
                                 simpleModels <- return $ concat (map prettyPrintStmt stmts)
                                 specs <- return $ makeSpecFile stmts
-                                writeFile (file ++ "simple-models") simpleModels
+                                writeFile (file ++ "-simple") simpleModels
                                 writeFile (file ++ ".spec") specs
                                 return ()
