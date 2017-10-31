@@ -11,4 +11,4 @@ Just run `stack build`
 
 ## Running
 
-Just run `stack exec binah`
+Just run `stack exec -- binah --help` to see how to use Binah.
