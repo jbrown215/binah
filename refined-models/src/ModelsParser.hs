@@ -7,6 +7,7 @@ import Text.ParserCombinators.Parsec.Language
 import qualified Text.ParserCombinators.Parsec.Token as Token
 import qualified Data.List.Split as Split
 import Data.List
+import Data.Char (isSpace)
 
 {- Table Datatype -}
 type Var = String
@@ -107,8 +108,11 @@ parseString str =
 parseExprs :: [String] -> [Stmt]
 parseExprs = (map parseString) 
 
+onlyWhitespace :: String -> Bool
+onlyWhitespace = null . (dropWhile isSpace)
+
 parseFile :: String -> IO [Stmt]
 parseFile file = do program  <- readFile file
-                    lines <- return $ Split.splitOn "\n" program
+                    lines <- return $ filter (not . onlyWhitespace) $ Split.splitOn "\n" program
                     parsed <- return $ parseExprs lines
                     return parsed
