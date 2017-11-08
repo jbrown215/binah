@@ -14,9 +14,11 @@ import Text.Printf
 
 
 data Flag =
-      Version    -- -v, --version
-    | Help       -- -h, --help
-    | Proofs     -- -p, --proofs
+      Version            -- -v, --version
+    | Help               -- -h, --help
+    | Proofs             -- -p, --proofs
+    | DecentralizedWorld -- -d, --decentralized-world
+    | CentralizedWorld   -- -c, --centralized-world
     deriving (Eq, Ord, Enum, Show, Bounded)
 
 version = "0.0"
@@ -25,6 +27,8 @@ help = "Usage: binah path/to/refined-models will generate the models file and mo
     ++ "  -v     Print the version number\n"
     ++ "  -h     Print help information\n"
     ++ "  -p     Generate database program proofs\n"
+    ++ "  -d     Generate decentralized world\n"
+    ++ "  -c     Generate centralized world\n"
 usage = "Normal usage is: binah [refined-models]\nTry --help for other options."
 
 flags =
@@ -34,12 +38,18 @@ flags =
         "Prints the help page."
     , Option ['p'] ["proofs"] (NoArg Proofs)
         "Generates proofs for the models files."
+    , Option ['d'] ["decentralized-world"] (NoArg DecentralizedWorld)
+        "Generates the decentralized world."
+    , Option ['c'] ["entralized-world"] (NoArg CentralizedWorld)
+        "Generates the centralized world."
     ]
 
 parse argv = case getOpt Permute flags argv of
     ([Version], _, []) -> putStrLn $ "Binah version " ++ version
     ([Help], _, []) -> putStrLn help 
     ([Proofs], [file], []) -> makeProofs file
+    ([DecentralizedWorld], [file], []) -> makeDecentralizedWorld file
+    ([CentralizedWorld], [file], []) -> makeCentralizedWorld file
     ([], [file], []) -> makeModelsAndSpecFile file
     _ -> putStrLn usage
 

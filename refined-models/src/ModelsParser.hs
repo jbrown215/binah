@@ -13,6 +13,9 @@ import Data.Char (isSpace)
 type Var = String
 type SimpleType = String
 
+toVar :: String -> Var
+toVar x = x
+
 {- Predicate is just a list of strings right now -}
 data Type = Refined Var SimpleType [String]
           | Simple SimpleType
