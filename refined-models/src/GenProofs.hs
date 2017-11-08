@@ -120,7 +120,7 @@ mapInd f l = zipWith f l [0..]
 
 makeRefinedField tab set (v, v', t, refs) = 
     let capTable = " canonical" ++ (capFirst tab) in
-    let refs' = map (\x -> if not (x == v') then x else (v ++ capTable)) refs in
+    let refs' = map (\x -> if (x == v') then (v ++ capTable) else x) refs in
     let refs'' = map (\x -> if Set.member x set then x ++ capTable else x) refs' in
     let funcName = (lowFirst tab) ++ "_invariant_" ++ v in
     "{-@ assume " ++ funcName ++ " :: {v:() | " ++ (intercalate " " refs'')++ "} @-}\n"
@@ -129,7 +129,7 @@ makeRefinedField tab set (v, v', t, refs) =
 makeInvariantsForTable :: RefinedTable -> String
 makeInvariantsForTable (t, fs) =
    let fields = Set.fromList (map firstPref fs) in
-    let capTable = " canonical" ++ (capFirst t) in
+   let capTable = " canonical" ++ (capFirst t) in
    "{-@ measure" ++ capTable ++ " :: " ++ (capFirst t) ++ " @-}"++ "\n\n" ++ (concat (map (makeRefinedField t fields) fs))  ++ "\n\n" 
    where firstPref (a,_,_,_) = (lowFirst t) ++ (capFirst a)
 
