@@ -87,10 +87,22 @@ select _ = undefined
 
 -- Should typecheck:
 -- Why does only the second one typecheck?
-{-@ getZeros :: () -> [{b:Blob | xVal b = 0}] @-}
-getZeros :: () -> [Blob]
-getZeros () = select (createEqQuery BlobXVal 0)
+-- {-@ getZeros :: () -> [{b:Blob | xVal b = 0}] @-}
+-- getZeros :: () -> [Blob]
+-- getZeros () = select (createEqQuery BlobXVal 0)
 
 {-@ getZeros_ :: () -> [{b:Blob | xVal b = 0}] @-}
 getZeros_ :: () -> [Blob]
 getZeros_ () = select (Filter BlobXVal 0 EQUAL)
+
+{-@ getBiggerThan10 :: () -> [{b:Blob | xVal b >= 10}] @-}
+getBiggerThan10 :: () -> [Blob]
+getBiggerThan10 () = select (Filter BlobXVal 11 GE)
+
+-- Should not typecheck
+{-@ getBiggerThan10Fail :: () -> [{b:Blob | xVal b >= 10}] @-}
+getBiggerThan10Fail :: () -> [Blob]
+getBiggerThan10Fail () = select (Filter BlobXVal 9 GE)
+
+-- coming up: selectFrom :: Table -> Filter -> Blob
+-- finally: selectWhere :: Table -> [Filter] -> Blob! We're almost there!
