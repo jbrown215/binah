@@ -1,7 +1,8 @@
+{-@ LIQUID "--no-adt" 	                           @-}
 {-@ LIQUID "--exact-data-con"                      @-}
 {-@ LIQUID "--higherorder"                         @-}
 {-@ LIQUID "--no-termination"                      @-}
-{-@ LIQUID "--automatic-instances=liquidinstances" @-}
+{-@ LIQUID "--ple" @-} 
 
 {-# LANGUAGE ExistentialQuantification, KindSignatures, TypeFamilies, GADTs #-}
 
@@ -31,6 +32,15 @@ createEqQuery field value =
   , filterFilter = EQUAL
   }
 
+createLeQuery :: (PersistEntity record, Eq typ) => 
+                 EntityField record typ -> typ -> Filter record typ
+createLeQuery field value =
+  Filter {
+    filterField = field
+  , filterValue = value
+  , filterFilter = LE 
+  }
+
 {-@ data Blob  = B { xVal :: Int, yVal :: Int } @-}
 data Blob  = B { xVal :: Int, yVal :: Int }
 
@@ -50,20 +60,17 @@ filter f (x:xs)
   | otherwise   =     filter f xs
 filter _ []     = []
 
-{- I don't think evalA is generalizable -}
-{- I don't think evalQ is generalizable -}
-
 {-@ reflect evalQBlobXVal @-}
 evalQBlobXVal :: PersistFilter -> Int -> Int -> Bool
 evalQBlobXVal EQUAL filter given = filter == given
 evalQBlobXVal LE filter given = given <= filter
-evalQBlobXVal GE filter given = given <= filter
+evalQBlobXVal GE filter given = given >= filter
 
 {-@ reflect evalQBlobYVal @-}
 evalQBlobYVal :: PersistFilter -> Int -> Int -> Bool
 evalQBlobYVal EQUAL filter given = filter == given
 evalQBlobYVal LE filter given = given <= filter
-evalQBlobYVal GE filter given = given <= filter
+evalQBlobYVal GE filter given = given >= filter
 
 {-@ reflect evalQBlob @-}
 evalQBlob :: Filter Blob typ -> Blob -> Bool
@@ -74,3 +81,18 @@ evalQBlob filter blob = case filterField filter of
 {-@ filterQBlob :: f:(Filter Blob a) -> [Blob] -> [{b:Blob | evalQBlob f b}] @-}
 filterQBlob :: Filter Blob a -> [Blob] -> [Blob]
 filterQBlob q = filter (evalQBlob q)
+
+{-@ assume select :: f:(Filter Blob a) -> [{b:Blob | evalQBlob f b}] @-}
+select :: Filter Blob a -> [Blob]
+select _ = undefined
+
+-- Client code:
+
+-- Should typecheck:
+{-@ getZeros :: [Blob] -> [{b:Blob | xVal b == 0}] @-}
+getZeros :: [Blob] -> [Blob]
+getZeros blobs = filterQBlob (createEqQuery BlobXVal 0) blobs 
+
+{-@ getZeros_ :: () -> [{b:Blob | xVal b == 0}] @-}
+getZeros_ :: () -> [Blob]
+getZeros_ () = select (createEqQuery BlobXVal 0)
