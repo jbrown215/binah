@@ -23,15 +23,12 @@ data Filter record typ = Filter
     , filterFilter :: PersistFilter
     } 
 
+{-@ reflect createEqQuery @-}
 createEqQuery :: (PersistEntity record, Eq typ) => 
                  EntityField record typ -> typ -> Filter record typ
-createEqQuery field value =
-  Filter {
-    filterField = field
-  , filterValue = value
-  , filterFilter = EQUAL
-  }
+createEqQuery field value = Filter field value EQUAL
 
+{-@ reflect createLeQuery @-}
 createLeQuery :: (PersistEntity record, Eq typ) => 
                  EntityField record typ -> typ -> Filter record typ
 createLeQuery field value =
@@ -89,10 +86,11 @@ select _ = undefined
 -- Client code:
 
 -- Should typecheck:
-{-@ getZeros :: [Blob] -> [{b:Blob | xVal b == 0}] @-}
-getZeros :: [Blob] -> [Blob]
-getZeros blobs = filterQBlob (createEqQuery BlobXVal 0) blobs 
+-- Why does only the second one typecheck?
+{-@ getZeros :: () -> [{b:Blob | xVal b = 0}] @-}
+getZeros :: () -> [Blob]
+getZeros () = select (createEqQuery BlobXVal 0)
 
-{-@ getZeros_ :: () -> [{b:Blob | xVal b == 0}] @-}
+{-@ getZeros_ :: () -> [{b:Blob | xVal b = 0}] @-}
 getZeros_ :: () -> [Blob]
-getZeros_ () = select (createEqQuery BlobXVal 0)
+getZeros_ () = select (Filter BlobXVal 0 EQUAL)
