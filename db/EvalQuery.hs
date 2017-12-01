@@ -4,6 +4,10 @@
 {-@ LIQUID "--no-termination"                      @-}
 {-@ LIQUID "--ple" @-} 
 
+{-@ infixr === @-}
+{-@ infixr >== @-}
+{-@ infixr <== @-}
+
 {-# LANGUAGE ExistentialQuantification, KindSignatures, TypeFamilies, GADTs #-}
 
 module Query where
@@ -23,19 +27,30 @@ data Filter record typ = Filter
     , filterFilter :: PersistFilter
     } 
 
-{-@ reflect createEqQuery @-}
-createEqQuery :: (PersistEntity record, Eq typ) => 
-                 EntityField record typ -> typ -> Filter record typ
-createEqQuery field value = Filter field value EQUAL
 
-{-@ reflect createLeQuery @-}
-createLeQuery :: (PersistEntity record, Eq typ) => 
+{-@ reflect === @-}
+(===) :: (PersistEntity record, Eq typ) => 
                  EntityField record typ -> typ -> Filter record typ
-createLeQuery field value =
+field === value = Filter field value EQUAL
+
+{-@ reflect <== @-}
+(<==) :: (PersistEntity record, Eq typ) => 
+                 EntityField record typ -> typ -> Filter record typ
+field <== value =
   Filter {
     filterField = field
   , filterValue = value
   , filterFilter = LE 
+  }
+
+{-@ reflect >== @-}
+(>==) :: (PersistEntity record, Eq typ) => 
+                 EntityField record typ -> typ -> Filter record typ
+field >== value =
+  Filter {
+    filterField = field
+  , filterValue = value
+  , filterFilter = GE 
   }
 
 {-@ data Blob  = B { xVal :: Int, yVal :: Int } @-}
@@ -128,7 +143,7 @@ filterQRange q = filter (evalQRange q)
 
 {-@ assume selectBlob :: f:[(Filter Blob a)] -> [{b:Blob | evalQsBlob f b}] @-}
 selectBlob :: [Filter Blob a] -> [Blob]
-selectBlob _ = undefined
+selectBlob fs = undefined 
 
 {-@ assume selectRange :: f:(Filter Range a) -> [{b:Range | evalQRange f b}] @-}
 selectRange :: Filter Range a -> [Range]
@@ -156,10 +171,10 @@ getBiggerThan10 () = selectBlob [(Filter BlobXVal 11 GE)]
 
 {-@ getInRange :: () -> [{b:Blob | xVal b >= 10  && xVal b <= 20 && yVal b >= 0 && yVal b <= 11}] @-}
 getInRange :: () -> [Blob]
-getInRange () = selectBlob [ (Filter BlobXVal 10 GE)
-                           , (Filter BlobXVal 20 LE)
-                           , (Filter BlobYVal 0 GE)
-                           , (Filter BlobYVal 11 LE)
+getInRange () = selectBlob [ (BlobXVal >== 10)
+                           , (BlobXVal <== 20)
+                           , (BlobYVal >== 0)
+                           , (BlobYVal <== 11)
                            ]
 
 -- Should not typecheck
