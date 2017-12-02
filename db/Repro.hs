@@ -1,27 +1,38 @@
-{-@ LIQUID "--exact-data-con"                      @-}
-{-@ LIQUID "--higherorder"                         @-}
-{-@ LIQUID "--no-termination"                      @-}
-{-@ LIQUID "--automatic-instances=liquidinstances" @-}
+{-@ LIQUID "--exact-data-con" @-}
+{-# LANGUAGE EmptyDataDecls, ExistentialQuantification, KindSignatures, TypeFamilies, GADTs #-}
 
-{-# LANGUAGE ExistentialQuantification, KindSignatures, TypeFamilies, GADTs #-}
+module Query where
 
-class PersistEntity record where
-    {-@ data EntityField @-}
-    data EntityField record :: * -> *
+import Prelude hiding (filter)
 
-{-@ data Blob  = B {} @-}
-data Blob  = B {}
+data User
 
-instance PersistEntity Blob where
-    {-@ data EntityField record typ where
-        BlobXVal :: EntityField Blob Int
-      | BlobYVal :: EntityField Blob Int
-    @-}
-    data EntityField Blob typ where
-        BlobXVal :: EntityField Blob Int
-        BlobYVal :: EntityField Blob Int
+{-@ data Tagged a <p :: User->Bool> = Tagged (content :: a) @-}
+data Tagged a = Tagged a
 
-{-@ reflect shouldntError @-}
-shouldntError :: EntityField Blob a -> Bool
-shouldntError BlobXVal = True
-shouldntError BlobYVal = False
+{-@ data variance Tagged covariant contravariant @-}
+
+instance Functor Tagged where
+  fmap f (Tagged x) = Tagged (f x)
+
+instance Applicative Tagged where
+  pure  = Tagged
+  -- f (a -> b) -> f a -> f b 
+  (Tagged f) <*> (Tagged x) = Tagged (f x)
+
+instance Monad Tagged where
+  return x = Tagged x
+  (Tagged x) >>= f = f x 
+  (Tagged _) >>  t = t  
+  fail          = error
+
+{-@ instance Monad Tagged where 
+     >>= :: forall <p :: User -> Bool, f:: a -> b -> Bool>. 
+            x:Tagged <p> a
+         -> (u:a -> Tagged <p> (b <f u>))
+         -> Tagged <p> (b<f (content x)>); 
+     >>  :: x:Tagged a
+         -> Tagged b
+         -> Tagged b;
+     return :: forall <p :: User -> Bool>. a -> Tagged <p> a 
+  @-}
