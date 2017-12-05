@@ -1,6 +1,8 @@
+{-@ LIQUID "--no-adt" 	                           @-}
+{-@ LIQUID "--exact-data-con"                      @-}
 {-@ LIQUID "--higherorder"                         @-}
 {-@ LIQUID "--no-termination"                      @-}
-{-@ LIQUID "--automatic-instances=liquidinstances" @-}
+{-@ LIQUID "--ple" @-} 
 
 {-# LANGUAGE ExistentialQuantification, KindSignatures, TypeFamilies, GADTs #-}
 
@@ -20,7 +22,7 @@ instance PersistEntity Blob where
 {-@ data Blob  = B { xVal :: {v:Int | v >= 0}, yVal :: Int } @-}
 data Blob  = B { xVal :: Int, yVal :: Int }
 
-{-@ data Update record typ <p :: typ -> Bool> = Update { updateField :: EntityField record typ<p>, updateValue :: typ<p> } @-}
+{-@ data Update record typ = Update { updateField :: EntityField record typ, updateValue :: typ } @-}
 data Update record typ = Update 
     { updateField :: EntityField record typ
     , updateValue :: typ
@@ -28,7 +30,7 @@ data Update record typ = Update
 
 {-@ data variance Update covariant covariant contravariant @-}
 
-{-@ createUpdate :: forall a <p :: a -> Bool>. EntityField record a<p> -> a<p> -> Update record a<p> @-}
+{-@ createUpdate :: EntityField record a<p> -> a<p> -> Update record a<p> @-}
 createUpdate :: EntityField record a -> a -> Update record a
 createUpdate field value = Update {
       updateField = field
