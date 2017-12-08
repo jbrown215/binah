@@ -13,33 +13,27 @@ import Data.Char (isSpace)
 type Var = String
 type SimpleType = String
 
+data ListType = Id SimpleType
+                | Brackets SimpleType
+                deriving (Show)
+
+
 toVar :: String -> Var
 toVar x = x
 
 {- Predicate is just a list of strings right now -}
-data Type = Refined Var SimpleType [String]
-          | Simple SimpleType
+data Type = Refined Var String [String]
+          | Simple String
           deriving (Show)
 
 data Stmt = NewRecord Var
           | Field Var Type
           | Deriving Var
+          | Blank
           deriving (Show)
 
 {- Refined Models Language -}
-languageDef =
-  emptyDef { Token.commentStart   = ""
-           , Token.commentEnd = ""
-           , Token.commentLine    = ""
-           , Token.nestedComments = True
-           , Token.identStart     = letter 
-           , Token.identLetter    = alphaNum <|> oneOf "_'"
-           , Token.opStart        = alphaNum <|> oneOf "_'" <|> oneOf "!#$%&*+./<=>?@\\^-~"
-           , Token.opLetter       = alphaNum <|> oneOf "_'" <|> oneOf "!#$%&*+./<=>?@\\^-~"
-           , Token.reservedOpNames= [":", "|"]
-           , Token.reservedNames  = ["deriving"]
-           , Token.caseSensitive  = True
-           }
+languageDef = haskellDef
 
 {- Lexer Helpers -}
 lexer = Token.makeTokenParser languageDef
@@ -51,20 +45,35 @@ identifier = Token.identifier lexer
 whiteSpace = Token.whiteSpace lexer
 otherOp = Token.operator lexer
 typeOf = Token.colon lexer
+brackets = Token.brackets lexer
+integer = Token.integer lexer
+
 
 {- Helpers for Parsing Refined Types -}
+
+integerString :: Parser Var
+integerString = do x <- integer
+                   return $ show x
+
 predicateString :: Parser Var
-predicateString = otherOp <|> identifier
+predicateString = otherOp
+                  <|> identifier
+                  <|> integerString
 
 predicateSequence :: Parser [Var]
-predicateSequence = do list <- (many1 predicateString)
+predicateSequence = do list <- (many1 $ predicateString)
                        return list
+
+
+listToSimple :: ListType -> SimpleType
+listToSimple (Brackets t) = "[" ++ t ++ "]"
+listToSimple (Id t) = t
 
 refinedtype :: Parser Type
 refinedtype =
   do var <- identifier
      typeOf
-     simptype <- identifier
+     Simple simptype <- simpletype
      reservedOp "|"
      predicate <- predicateSequence
      return $ Refined var simptype predicate
@@ -74,9 +83,17 @@ typ :: Parser Type
 typ = (braces refinedtype)
         <|> simpletype 
 
+listType :: Parser ListType
+listType = do typ <- brackets identifier
+              return $ Brackets typ
+
+idType :: Parser ListType
+idType = do typ <- identifier
+            return $ Id typ
+
 simpletype :: Parser Type
-simpletype = do typ <- many1 identifier
-                return $ Simple (intercalate " " typ)
+simpletype = do typ <- many1 (idType <|> listType)
+                return $ Simple (intercalate " " $ map listToSimple typ)
                 
 {- Helpers for Parsing Derive Statements -}
 derive :: Parser Stmt
@@ -93,29 +110,41 @@ field = do var <- identifier
 
 newtable :: Parser Stmt
 newtable = do var <- identifier
+              _ <- eof
               return $ NewRecord var
 
+blank :: Parser Stmt
+blank = do _ <- optional $ whiteSpace
+           _ <- eof
+           return Blank
+
 declaration :: Parser Stmt
-declaration = (try field) <|> (try newtable) <|> derive
+declaration = (try field) <|> (try newtable) <|> (try derive) <|> blank
 
 {- Parsing -}
 whileParser :: Parser Stmt
 whileParser = whiteSpace >> declaration
 
-parseString :: String -> Stmt
-parseString str =
+parseString :: String -> Int -> Stmt
+parseString str idx =
   case parse whileParser "" str of
-    Left e  -> error $ show e
+    Left e  -> error $ "Error Line " ++ show idx ++ ": " ++ str ++ "\n" ++ show e
     Right r -> r
-   
+
+mapIdx f l = zipWith f l [1..]
+
+notBlank :: Stmt -> Bool
+notBlank Blank = False
+notBlank _ = True
+             
 parseExprs :: [String] -> [Stmt]
-parseExprs = (map parseString) 
+parseExprs = (mapIdx parseString) 
 
 onlyWhitespace :: String -> Bool
 onlyWhitespace = null . (dropWhile isSpace)
 
 parseFile :: String -> IO [Stmt]
 parseFile file = do program  <- readFile file
-                    lines <- return $ filter (not . onlyWhitespace) $ Split.splitOn "\n" program
-                    parsed <- return $ parseExprs lines
+                    lines <- return $ Split.splitOn "\n" program
+                    parsed <- return $ filter notBlank $ parseExprs lines
                     return parsed
