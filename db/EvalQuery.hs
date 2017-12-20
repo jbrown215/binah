@@ -17,7 +17,6 @@ import Prelude hiding (filter)
 data PersistFilter = EQUAL | LE | GE
 
 class PersistEntity record where
-    {-@ data EntityField @-}
     data EntityField record :: * -> *
 
 {-@ data Filter record typ = Filter { filterField :: EntityField record typ, filterValue :: typ, filterFilter :: PersistFilter } @-}
@@ -57,7 +56,7 @@ field >== value =
 data Blob  = B { xVal :: Int, yVal :: Int }
 
 instance PersistEntity Blob where
-    {-@ data EntityField record typ where
+    {-@ data EntityField Blob typ where
         BlobXVal :: EntityField Blob Int
       | BlobYVal :: EntityField Blob Int
     @-}
@@ -69,7 +68,7 @@ instance PersistEntity Blob where
 data Range = Range { lower :: Int, upper :: Int }
 
 instance PersistEntity Range where
-    {-@ data EntityField record typ where
+    {-@ data EntityField Range typ where
         RangeLower :: EntityField Range Int
       | RangeUpper :: EntityField Range Int
     @-}
@@ -182,13 +181,13 @@ getInRange () = selectBlob [ (BlobXVal >== 10)
 -- getBiggerThan10Fail :: () -> [Blob]
 -- getBiggerThan10Fail () = selectBlob (Filter BlobXVal 9 GE)
 --
--- {-@ getInRange_ :: () -> [{b:Blob | xVal b >= 10  && xVal b <= 19 && yVal b >= 0 && yVal b <= 11}] @-}
--- getInRange_ :: () -> [Blob]
--- getInRange_ () = selectBlob [ (Filter BlobXVal 10 GE)
---                             , (Filter BlobXVal 20 LE)
---                             , (Filter BlobYVal 0 GE)
---                             , (Filter BlobYVal 11 LE)
---                             ]
+{-@ getInRange_ :: () -> [{b:Blob | xVal b >= 10  && xVal b <= 19 && yVal b >= 0 && yVal b <= 11}] @-}
+getInRange_ :: () -> [Blob]
+getInRange_ () = selectBlob [ (Filter BlobXVal 10 GE)
+                            , (Filter BlobXVal 20 LE)
+                            , (Filter BlobYVal 0 GE)
+                            , (Filter BlobYVal 11 LE)
+                            ]
 
 
 -- It would be nice if we could parameterize things by a table instead of
