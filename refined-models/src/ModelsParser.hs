@@ -47,7 +47,7 @@ otherOp = Token.operator lexer
 typeOf = Token.colon lexer
 brackets = Token.brackets lexer
 integer = Token.integer lexer
-
+stringLit = Token.stringLiteral lexer
 
 {- Helpers for Parsing Refined Types -}
 
@@ -55,10 +55,15 @@ integerString :: Parser Var
 integerString = do x <- integer
                    return $ show x
 
+quotedString :: Parser Var
+quotedString = do s <- stringLit
+                  return $ "\"" ++ s ++ "\""
+
 predicateString :: Parser Var
 predicateString = otherOp
                   <|> identifier
                   <|> integerString
+                  <|> quotedString
 
 predicateSequence :: Parser [Var]
 predicateSequence = do list <- (many1 $ predicateString)
@@ -81,7 +86,7 @@ refinedtype =
 {- Helpers for Parsing Types -}
 typ :: Parser Type
 typ = (braces refinedtype)
-        <|> simpletype 
+        <|> simpletype
 
 listType :: Parser ListType
 listType = do typ <- brackets identifier
@@ -94,7 +99,7 @@ idType = do typ <- identifier
 simpletype :: Parser Type
 simpletype = do typ <- many1 (idType <|> listType)
                 return $ Simple (intercalate " " $ map listToSimple typ)
-                
+
 {- Helpers for Parsing Derive Statements -}
 derive :: Parser Stmt
 derive =
@@ -136,9 +141,9 @@ mapIdx f l = zipWith f l [1..]
 notBlank :: Stmt -> Bool
 notBlank Blank = False
 notBlank _ = True
-             
+
 parseExprs :: [String] -> [Stmt]
-parseExprs = (mapIdx parseString) 
+parseExprs = (mapIdx parseString)
 
 onlyWhitespace :: String -> Bool
 onlyWhitespace = null . (dropWhile isSpace)
