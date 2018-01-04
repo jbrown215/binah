@@ -10,14 +10,42 @@ import qualified Data.Set as Set
 type SimpleTable = (Var, [(Var, SimpleType)])
 type RefinedTable = (Var, [(Var, Var, SimpleType, [String])])
 
-data PersistFilter = EQUAL | LE | GE
+data PersistType = TEXT | BSTRING | I64 | DOUBLE | RAT
+                 | BOOL | DAY     | TOD | TIME
+
+data PersistFilter = EQUAL | LE | GE | LTP | GTP | NE
                      deriving Show
-persistFilters = [EQUAL, LE, GE]
+
+toType :: SimpleType -> PersistType
+toType "Text"       = TEXT
+toType "ByteString" = BSTRING
+toType "Int64"      = I64
+toType "Int"        = I64
+toType "Double"     = DOUBLE
+toType "Rational"   = RAT
+toType "Bool"       = BOOL
+toType "Day"        = DAY
+toType "TimeOfDay"  = TOD
+toType "UTCTime"    = TIME
+
+persistFilters :: PersistType -> [PersistFilter]
+persistFilters TEXT    = [EQUAL, LE, GE, LTP, GTP, NE]
+persistFilters BSTRING = [EQUAL, LE, GE, LTP, GTP, NE]
+persistFilters I64     = [EQUAL, LE, GE, LTP, GTP, NE]
+persistFilters DOUBLE  = [EQUAL, LE, GE, LTP, GTP, NE]
+persistFilters RAT     = [EQUAL, LE, GE, LTP, GTP, NE]
+persistFilters DAY     = [EQUAL, LE, GE, LTP, GTP, NE]
+persistFilters TOD     = [EQUAL, LE, GE, LTP, GTP, NE]
+persistFilters TIME    = [EQUAL, LE, GE, LTP, GTP, NE]
+persistFilters BOOL    = [EQUAL, NE]
 
 toSymbol :: PersistFilter -> String
 toSymbol EQUAL = "=="
 toSymbol LE    = "<="
 toSymbol GE    = ">="
+toSymbol LTP   = "<"
+toSymbol GTP   = ">"
+toSymbol NE    = "/="
 
 capFirst :: [Char] -> [Char]
 capFirst [] = []
@@ -74,9 +102,10 @@ formatFieldEval record (field, t) =
     let capField = capFirst field in
     let funcName = "evalQ" ++ record ++ capField in
     let reflectComment = "{-@ reflect " ++ funcName ++ " @-}\n" in
+    let filters = persistFilters (toType t) in
     reflectComment ++ 
     funcName ++ " :: PersistFilter -> " ++ t ++ " -> " ++ t ++ " -> Bool\n" ++
-    (concat (map (formatFieldCase funcName) persistFilters)) ++ "\n"
+    (concat (map (formatFieldCase funcName) filters)) ++ "\n"
 
 formatCase :: Var -> Var -> String
 formatCase record field =
