@@ -14,6 +14,13 @@ import           Database.Persist
 import           Database.Persist.Sqlite
 import           Database.Persist.TH
 
+{-@ data EntityField Blob typ where
+      BlobXVal :: EntityField Blob {v:_ | True}
+    | BlobYVal :: EntityField Blob {v:_ | True}
+  @-}
+
+{-@ assume error :: String -> a @-} 
+
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 Person
     name String
