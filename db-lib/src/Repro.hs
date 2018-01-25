@@ -23,8 +23,10 @@ import           Models
 
 -- Why don't these work? They produce different error messages.
 -- {-@ data Blob = Blob { blobXVal :: Int, blobYVal :: Int } @-}
-{-
-{-@ data EntityField Blob typ where
-    BlobXVal :: EntityField Blob Int
-  | BlobYVal :: EntityField Blob Int @-}
--}
+
+-- RJ: moved to src/Models.hs
+{- data EntityField Blob typ where
+      BlobXVal :: EntityField Blob {v:_ | True}
+    | BlobYVal :: EntityField Blob {v:_ | True}  
+  -}
+
