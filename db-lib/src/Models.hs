@@ -17,6 +17,7 @@ import           Database.Persist.TH
 {-@ data EntityField Blob typ where
       BlobXVal :: EntityField Blob {v:_ | True}
     | BlobYVal :: EntityField Blob {v:_ | True}
+    | BlobId   :: EntityField Blob {v:_ | True}
   @-}
 
 {-@ assume error :: String -> a @-} 

@@ -34,3 +34,4 @@ evalQBlob :: RefinedFilter Blob typ -> Blob -> Bool
 evalQBlob filter blob = case refinedFilterField filter of
     BlobXVal -> True
     BlobYVal -> True
+    BlobId ->   True
