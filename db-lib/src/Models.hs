@@ -31,7 +31,7 @@ BlogPost
     authorId PersonId
     deriving Show
 Blob
-    xVal Int
-    yVal Int
+    ~xVal Int
+    ~yVal Int
 |]
 

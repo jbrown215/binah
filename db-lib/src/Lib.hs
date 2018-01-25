@@ -55,11 +55,7 @@ field >== value =
   }
 
 
--- Why doesnt this work?
 {-@ data Blob = Blob { blobXVal :: Int, blobYVal :: Int } @-}
---data EntityField Blob typ where
---    BlobXVal :: EntityField Blob Int
---  | BlobYVal :: EntityField Blob Int
 
 toPersistentFilter :: PersistField typ =>
                       RefinedFilter record typ -> Filter record

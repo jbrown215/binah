@@ -21,12 +21,16 @@ import           Database.Persist.Sqlite
 import           Database.Persist.TH
 import           Models
 
--- Why don't these work? They produce different error messages.
--- {-@ data Blob = Blob { blobXVal :: Int, blobYVal :: Int } @-}
+data RefinedPersistFilter = EQUAL | LE | GE
 
--- RJ: moved to src/Models.hs
-{- data EntityField Blob typ where
-      BlobXVal :: EntityField Blob {v:_ | True}
-    | BlobYVal :: EntityField Blob {v:_ | True}  
-  -}
+data RefinedFilter record typ = RefinedFilter
+    { refinedFilterField  :: EntityField record typ
+    , refinedFilterValue  :: typ
+    , refinedFilterFilter :: RefinedPersistFilter
+    } 
 
+{-@ reflect evalQBlob @-}
+evalQBlob :: RefinedFilter Blob typ -> Blob -> Bool
+evalQBlob filter blob = case refinedFilterField filter of
+    BlobXVal -> True
+    BlobYVal -> True
