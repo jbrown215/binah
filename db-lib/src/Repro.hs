@@ -23,9 +23,6 @@ import           Database.Persist.Sqlite
 import           Database.Persist.TH
 import           Models
 
-zoink = Models.BlogPostAuthorId 
-
-
 data RefinedPersistFilter = EQUAL | LE | GE
 
 data RefinedFilter record typ = RefinedFilter
