@@ -7,11 +7,13 @@
 {-# LANGUAGE QuasiQuotes                #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
-{-@ LIQUID "--no-adt" 	                           @-}
-{-@ LIQUID "--exact-data-con"                      @-}
-{-@ LIQUID "--higherorder"                         @-}
-{-@ LIQUID "--no-termination"                      @-}
-{-@ LIQUID "--ple" @-} 
+
+{-@ LIQUID "--no-adt"                   @-}
+{-@ LIQUID "--exact-data-con"           @-}
+{-@ LIQUID "--higherorder"              @-}
+{-@ LIQUID "--no-termination"           @-}
+{-@ LIQUID "--ple"                      @-} 
+
 module Repro where
 import           Prelude hiding (filter)
 import           Control.Monad.IO.Class  (liftIO, MonadIO)
@@ -20,6 +22,9 @@ import           Database.Persist
 import           Database.Persist.Sqlite
 import           Database.Persist.TH
 import           Models
+
+zoink = Models.BlogPostAuthorId 
+
 
 data RefinedPersistFilter = EQUAL | LE | GE
 
