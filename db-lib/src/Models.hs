@@ -8,6 +8,11 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 
+{-@ LIQUID "--no-adt"                   @-}
+{-@ LIQUID "--exact-data-con"           @-}
+{-@ LIQUID "--higherorder"              @-}
+{-@ LIQUID "--no-termination"           @-}
+
 module Models where
 
 import           Control.Monad
@@ -24,12 +29,12 @@ import           Web.Internal.HttpApiData
 import           Web.PathPieces
 
 {-@ data EntityField Blob typ where
-      BlobXVal :: EntityField Blob {v:_ | True}
-    | BlobYVal :: EntityField Blob {v:_ | True}
-    | BlobId   :: EntityField Blob {v:_ | True}
+      Models.BlobXVal :: EntityField Blob {v:_ | True}
+    | Models.BlobYVal :: EntityField Blob {v:_ | True}
+    | Models.BlobId   :: EntityField Blob {v:_ | True}
   @-}
 
-{-@ assume error :: String -> a @-} 
+{-@ assume Prelude.error :: String -> a @-} 
 
 fieldError :: Text -> Text -> Text
 fieldError fieldName err = "field " `mappend` fieldName `mappend` ": " `mappend` err
