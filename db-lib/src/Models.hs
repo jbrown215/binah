@@ -34,6 +34,8 @@ import           Web.PathPieces
     | Models.BlobId   :: EntityField Blob {v:_ | True}
   @-}
 
+{-@ data Blob = Blob { blobXVal :: Int, blobYVal :: Int } @-}
+
 {-@ assume Prelude.error :: String -> a @-} 
 
 fieldError :: Text -> Text -> Text
