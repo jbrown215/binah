@@ -21,6 +21,14 @@ import           Database.Persist.Sqlite
 import           Database.Persist.TH
 import           Models
 
+{-@ data EntityField Blob typ where
+      BlobXVal :: EntityField Blob {v:_ | True}
+    | BlobYVal :: EntityField Blob {v:_ | True}
+    | BlobId   :: EntityField Blob {v:_ | True}
+  @-}
+
+{-@ assume error :: String -> a @-} 
+
 data RefinedPersistFilter = EQUAL | LE | GE
 
 data RefinedFilter record typ = RefinedFilter

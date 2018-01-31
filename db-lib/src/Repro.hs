@@ -31,9 +31,20 @@ data RefinedFilter record typ = RefinedFilter
     , refinedFilterFilter :: RefinedPersistFilter
     } 
 
+{-@ reflect evalQBlobXVal @-}
+evalQBlobXVal :: RefinedPersistFilter -> Int -> Int -> Bool
+evalQBlobXVal EQUAL filter given = filter == given
+evalQBlobXVal LE filter given = given <= filter
+evalQBlobXVal GE filter given = given >= filter
+
+{-@ reflect evalQBlobYVal @-}
+evalQBlobYVal :: RefinedPersistFilter -> Int -> Int -> Bool
+evalQBlobYVal EQUAL filter given = filter == given
+evalQBlobYVal LE filter given = given <= filter
+evalQBlobYVal GE filter given = given >= filter
+
 {-@ reflect evalQBlob @-}
 evalQBlob :: RefinedFilter Blob typ -> Blob -> Bool
 evalQBlob filter blob = case refinedFilterField filter of
-    BlobXVal -> True
-    BlobYVal -> True
-    BlobId ->   True
+    BlobXVal -> evalQBlobXVal (refinedFilterFilter filter) (refinedFilterValue filter) (blobXVal blob)
+    BlobYVal -> evalQBlobYVal (refinedFilterFilter filter) (refinedFilterValue filter) (blobYVal blob)
