@@ -21,16 +21,14 @@ import           Database.Persist.Sqlite
 import           Database.Persist.TH
 import           Models
 
-{-@ data EntityField Blob typ where
-      BlobXVal :: EntityField Blob {v:_ | True}
-    | BlobYVal :: EntityField Blob {v:_ | True}
-    | BlobId   :: EntityField Blob {v:_ | True}
-  @-}
-
-{-@ assume error :: String -> a @-} 
-
 data RefinedPersistFilter = EQUAL | LE | GE
 
+{-@ data RefinedFilter record typ = RefinedFilter
+    { refinedFilterField  :: EntityField record typ
+    , refinedFilterValue  :: typ
+    , refinedFilterFilter :: RefinedPersistFilter
+    } 
+@-}
 data RefinedFilter record typ = RefinedFilter
     { refinedFilterField  :: EntityField record typ
     , refinedFilterValue  :: typ
@@ -62,8 +60,6 @@ field >== value =
   , refinedFilterFilter = GE 
   }
 
-
-{-@ data Blob = Blob { blobXVal :: Int, blobYVal :: Int } @-}
 
 toPersistentFilter :: PersistField typ =>
                       RefinedFilter record typ -> Filter record
@@ -123,6 +119,12 @@ select :: (PersistEntityBackend record ~ BaseBackend backend,
                      backend m [Entity record]
 select fs ts = selectList (map toPersistentFilter fs) ts
 
+{-@ getBiggerThan10 :: () -> ReaderT backend m [Entity {b:Blob | blobXVal b >= 10}] @-}
+getBiggerThan10 :: (BaseBackend backend ~ SqlBackend,
+                    PersistQueryRead backend, MonadIO m) =>
+                   () -> ReaderT backend m [Entity Blob]
+getBiggerThan10 () = selectBlob [BlobXVal >== 10] []
+
 someFunc :: IO ()
 someFunc = runSqlite ":memory:" $ do
     runMigration migrateAll
@@ -135,6 +137,8 @@ someFunc = runSqlite ":memory:" $ do
 
     oneJohnPost <- select [BlogPostAuthorId === johnId] [LimitTo 1]
     liftIO $ print (oneJohnPost :: [Entity BlogPost])
+
+    blobs <- getBiggerThan10 ()
 
     let x = map (\a b -> blogPostTitle b) oneJohnPost
     john <- get johnId
