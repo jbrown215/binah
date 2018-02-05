@@ -7,6 +7,7 @@
 {-# LANGUAGE QuasiQuotes                #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE ExistentialQuantification  #-}
 
 {-@ LIQUID "--no-adt"                   @-}
 {-@ LIQUID "--exact-data-con"           @-}
@@ -25,27 +26,8 @@ import           Models
 
 data RefinedPersistFilter = EQUAL | LE | GE
 
-data RefinedFilter record typ = RefinedFilter
+data RefinedFilter record typ = forall typ. PersistField typ => RefinedFilter
     { refinedFilterField  :: EntityField record typ
     , refinedFilterValue  :: typ
     , refinedFilterFilter :: RefinedPersistFilter
     } 
-
-{-@ reflect evalQBlobXVal @-}
-evalQBlobXVal :: RefinedPersistFilter -> Int -> Int -> Bool
-evalQBlobXVal EQUAL filter given = filter == given
-evalQBlobXVal LE filter given = given <= filter
-evalQBlobXVal GE filter given = given >= filter
-
-{-@ reflect evalQBlobYVal @-}
-evalQBlobYVal :: RefinedPersistFilter -> Int -> Int -> Bool
-evalQBlobYVal EQUAL filter given = filter == given
-evalQBlobYVal LE filter given = given <= filter
-evalQBlobYVal GE filter given = given >= filter
-
-{-@ reflect evalQBlob @-}
-evalQBlob :: RefinedFilter Blob typ -> Blob -> Bool
-evalQBlob filter blob = case refinedFilterField filter of
-    BlobXVal -> evalQBlobXVal (refinedFilterFilter filter) (refinedFilterValue filter) (blobXVal blob)
-    BlobYVal -> evalQBlobYVal (refinedFilterFilter filter) (refinedFilterValue filter) (blobYVal blob)
-    BlobId   -> False
