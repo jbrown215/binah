@@ -29,7 +29,7 @@ import           Web.Internal.HttpApiData
 import           Web.PathPieces
 
 {-@ data EntityField Blob typ where
-      Models.BlobXVal :: EntityField Blob {v:_ | True}
+      Models.BlobXVal :: EntityField Blob {v:_ | v > 0}
     | Models.BlobYVal :: EntityField Blob {v:_ | True}
     | Models.BlobId   :: EntityField Blob {v:_ | True}
   @-}

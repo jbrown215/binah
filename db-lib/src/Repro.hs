@@ -48,3 +48,4 @@ evalQBlob :: RefinedFilter Blob typ -> Blob -> Bool
 evalQBlob filter blob = case refinedFilterField filter of
     BlobXVal -> evalQBlobXVal (refinedFilterFilter filter) (refinedFilterValue filter) (blobXVal blob)
     BlobYVal -> evalQBlobYVal (refinedFilterFilter filter) (refinedFilterValue filter) (blobYVal blob)
+    -- BlobId   -> False
