@@ -21,21 +21,31 @@ import           Database.Persist.Sqlite
 import           Database.Persist.TH
 import           Models
 
-{-@ data EntityField Blob typ where
-      BlobXVal :: EntityField Blob {v:_ | True}
-    | BlobYVal :: EntityField Blob {v:_ | True}
-    | BlobId   :: EntityField Blob {v:_ | True}
-  @-}
-
-{-@ assume error :: String -> a @-} 
-
 data RefinedPersistFilter = EQUAL | LE | GE
 
+{-@ data RefinedFilter record typ = RefinedFilter
+    { refinedFilterField  :: EntityField record typ
+    , refinedFilterValue  :: typ
+    , refinedFilterFilter :: RefinedPersistFilter
+    } 
+@-}
 data RefinedFilter record typ = RefinedFilter
     { refinedFilterField  :: EntityField record typ
     , refinedFilterValue  :: typ
     , refinedFilterFilter :: RefinedPersistFilter
     } 
+
+-- This is problematic because we don't want typ in the signature but we need it for LH
+{-@ data RefinedUpdate record typ = RefinedUpdate { refinedUpdateField :: EntityField record typ, refinedUpdateValue :: typ } @-}
+data RefinedUpdate record typ = RefinedUpdate 
+    { refinedUpdateField :: EntityField record typ
+    , refinedUpdateValue :: typ
+    } 
+
+{-@ (=#) :: EntityField record a -> a -> RefinedUpdate record a @-}
+(=#) :: PersistField typ => EntityField v typ -> typ -> RefinedUpdate v typ
+x =# y = RefinedUpdate x y
+
 
 {-@ reflect === @-}
 (===) :: (PersistEntity record, Eq typ) => 
@@ -63,8 +73,6 @@ field >== value =
   }
 
 
-{-@ data Blob = Blob { blobXVal :: Int, blobYVal :: Int } @-}
-
 toPersistentFilter :: PersistField typ =>
                       RefinedFilter record typ -> Filter record
 toPersistentFilter filter =
@@ -72,6 +80,10 @@ toPersistentFilter filter =
          EQUAL -> (refinedFilterField filter) ==. (refinedFilterValue filter)
          LE -> (refinedFilterField filter) <=. (refinedFilterValue filter)
          GE -> (refinedFilterField filter) >=. (refinedFilterValue filter)
+
+toPersistentUpdate :: PersistField typ =>
+                      RefinedUpdate record typ -> Update record
+toPersistentUpdate (RefinedUpdate a b) = a =. b
 
 {-@ filter :: f:(a -> Bool) -> [a] -> [{v:a | f v}] @-}
 filter :: (a -> Bool) -> [a] -> [a]
@@ -97,6 +109,7 @@ evalQBlob :: RefinedFilter Blob typ -> Blob -> Bool
 evalQBlob filter blob = case refinedFilterField filter of
     BlobXVal -> evalQBlobXVal (refinedFilterFilter filter) (refinedFilterValue filter) (blobXVal blob)
     BlobYVal -> evalQBlobYVal (refinedFilterFilter filter) (refinedFilterValue filter) (blobYVal blob)
+    BlobId   -> False
 
 {-@ reflect evalQsBlob @-}
 evalQsBlob :: [RefinedFilter Blob typ] -> Blob -> Bool
@@ -123,6 +136,14 @@ select :: (PersistEntityBackend record ~ BaseBackend backend,
                      backend m [Entity record]
 select fs ts = selectList (map toPersistentFilter fs) ts
 
+update_ id us = update id (map toPersistentUpdate us)
+
+{-@ getBiggerThan10 :: () -> ReaderT backend m [Entity {b:Blob | blobXVal b >= 10}] @-}
+getBiggerThan10 :: (BaseBackend backend ~ SqlBackend,
+                    PersistQueryRead backend, MonadIO m) =>
+                   () -> ReaderT backend m [Entity Blob]
+getBiggerThan10 () = selectBlob [BlobXVal >== 10] []
+
 someFunc :: IO ()
 someFunc = runSqlite ":memory:" $ do
     runMigration migrateAll
@@ -135,6 +156,10 @@ someFunc = runSqlite ":memory:" $ do
 
     oneJohnPost <- select [BlogPostAuthorId === johnId] [LimitTo 1]
     liftIO $ print (oneJohnPost :: [Entity BlogPost])
+
+    blobs <- getBiggerThan10 ()
+    blobId <- insert $ Blob 10 10
+    update_ blobId [BlobXVal =# (-1)]
 
     let x = map (\a b -> blogPostTitle b) oneJohnPost
     john <- get johnId
