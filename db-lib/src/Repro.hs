@@ -30,6 +30,7 @@ data RefinedFilter record typ = RefinedFilter
     { refinedFilterField  :: EntityField record typ
     , refinedFilterValue  :: typ
     , refinedFilterFilter :: RefinedPersistFilter
+    } 
 
 {- data RefinedUpdate record typ = RefinedUpdate { refinedUpdateField :: EntityField record typ, refinedUpdateValue :: typ } @-}
 data RefinedUpdate record typ = RefinedUpdate 
@@ -37,23 +38,5 @@ data RefinedUpdate record typ = RefinedUpdate
     , refinedUpdateValue :: typ
     } 
 
-{-@ (=#) :: EntityField record a -> a -> RefinedUpdate record a @-}
-(=#) :: PersistField typ => EntityField v typ -> typ -> RefinedUpdate v typ
-x =# y = RefinedUpdate x y
+bling = RefinedUpdate BlobXVal (0 - 5)
 
-toPersistentUpdate :: PersistField typ =>
-                      RefinedUpdate record typ -> Update record
-toPersistentUpdate (RefinedUpdate a b) = a =. b
-
-update_ id us = update id (map toPersistentUpdate us)
-
-{-@ reflect evalQBlob @-}
-evalQBlob :: RefinedFilter Blob typ -> Blob -> Bool
-evalQBlob filter blob = case refinedFilterField filter of
-    BlobXVal -> evalQBlobXVal (refinedFilterFilter filter) (refinedFilterValue filter) (blobXVal blob)
-    BlobYVal -> evalQBlobYVal (refinedFilterFilter filter) (refinedFilterValue filter) (blobYVal blob)
-    -- BlobId   -> False
-
-test () = do
-    blobId <- insert $ Blob 10 10
-    update_ blobId [BlobXVal =# (0 - 5)]
