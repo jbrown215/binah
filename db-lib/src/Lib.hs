@@ -44,11 +44,8 @@ data RefinedUpdate record typ = RefinedUpdate
     , refinedUpdateValue :: typ
     } 
 
-{- (=#) :: EntityField record a -> a -> RefinedUpdate record a @-}
--- (=#) :: PersistField typ => EntityField v typ -> typ -> RefinedUpdate v typ
-(=#) :: EntityField v typ -> typ -> RefinedUpdate v typ
-x =# y = undefined -- RefinedUpdate x y
-
+(=#) :: PersistField typ => EntityField v typ -> typ -> RefinedUpdate v typ
+x =# y = RefinedUpdate x y
 
 {-@ reflect === @-}
 (===) :: (PersistEntity record, Eq typ) => 
@@ -148,7 +145,6 @@ getBiggerThan10 :: (BaseBackend backend ~ SqlBackend,
 getBiggerThan10 () = selectBlob [BlobXVal >== 10] []
 
 
-dummy = RefinedUpdate BlobXVal (0 - 10)
 
 someFunc :: IO ()
 someFunc = runSqlite ":memory:" $ do
@@ -165,9 +161,9 @@ someFunc = runSqlite ":memory:" $ do
 
     blobs <- getBiggerThan10 ()
     blobId <- insert $ Blob 10 10
-
---    let cortado = (5 - 10) :: Int 
---    update_ blobId [BlobXVal =# cortado ]
+	
+    update_ blobId [RefinedUpdate BlobXVal (-1)]
+    update_ blobId [BlobXVal =# (-1)]
 
     let x = map (\a b -> blogPostTitle b) oneJohnPost
     john <- get johnId

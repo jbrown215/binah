@@ -32,7 +32,7 @@ data RefinedFilter record typ = RefinedFilter
     , refinedFilterFilter :: RefinedPersistFilter
     } 
 
-{- data RefinedUpdate record typ = RefinedUpdate { refinedUpdateField :: EntityField record typ, refinedUpdateValue :: typ } @-}
+{-@ data RefinedUpdate record typ = RefinedUpdate { refinedUpdateField :: EntityField record typ, refinedUpdateValue :: typ } @-}
 data RefinedUpdate record typ = RefinedUpdate 
     { refinedUpdateField :: EntityField record typ
     , refinedUpdateValue :: typ
