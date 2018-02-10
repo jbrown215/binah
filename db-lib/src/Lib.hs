@@ -7,11 +7,13 @@
 {-# LANGUAGE QuasiQuotes                #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
+
 {-@ LIQUID "--no-adt" 	                           @-}
 {-@ LIQUID "--exact-data-con"                      @-}
 {-@ LIQUID "--higherorder"                         @-}
 {-@ LIQUID "--no-termination"                      @-}
 {-@ LIQUID "--ple" @-} 
+
 module Lib where
 import           Prelude hiding (filter)
 import           Control.Monad.IO.Class  (liftIO, MonadIO)
@@ -28,7 +30,7 @@ data RefinedPersistFilter = EQUAL | LE | GE
     , refinedFilterValue  :: typ
     , refinedFilterFilter :: RefinedPersistFilter
     } 
-@-}
+  @-}
 data RefinedFilter record typ = RefinedFilter
     { refinedFilterField  :: EntityField record typ
     , refinedFilterValue  :: typ
@@ -42,10 +44,15 @@ data RefinedUpdate record typ = RefinedUpdate
     , refinedUpdateValue :: typ
     } 
 
-{-@ (=#) :: EntityField record a -> a -> RefinedUpdate record a @-}
-(=#) :: PersistField typ => EntityField v typ -> typ -> RefinedUpdate v typ
-x =# y = RefinedUpdate x y
+-- RJ: @Jordan, if you use the typeclass in the SIG i.e. if the HASKELL sig is 
+--   (=#) :: PersistField typ => EntityField v typ -> typ -> RefinedUpdate v typ
+-- then you need the LH sig that looks like this: 
+--   (=#) :: forall <p :: typ -> Bool>. PersistField typ => EntityField v (typ<p>) -> typ<p> -> RefinedUpdate v (typ<p>)
+-- Otherwise, just use the plain Haskell sig like below (without any classes)
+-- To see why, see the ESOP paper "abstract refinement types"
 
+(=#) :: EntityField v typ -> typ -> RefinedUpdate v typ
+x =# y = RefinedUpdate x y
 
 {-@ reflect === @-}
 (===) :: (PersistEntity record, Eq typ) => 
@@ -95,14 +102,14 @@ filter _ []     = []
 {-@ reflect evalQBlobXVal @-}
 evalQBlobXVal :: RefinedPersistFilter -> Int -> Int -> Bool
 evalQBlobXVal EQUAL filter given = filter == given
-evalQBlobXVal LE filter given = given <= filter
-evalQBlobXVal GE filter given = given >= filter
+evalQBlobXVal LE    filter given = given <= filter
+evalQBlobXVal GE    filter given = given >= filter
 
 {-@ reflect evalQBlobYVal @-}
 evalQBlobYVal :: RefinedPersistFilter -> Int -> Int -> Bool
 evalQBlobYVal EQUAL filter given = filter == given
-evalQBlobYVal LE filter given = given <= filter
-evalQBlobYVal GE filter given = given >= filter
+evalQBlobYVal LE    filter given = given <= filter
+evalQBlobYVal GE    filter given = given >= filter
 
 {-@ reflect evalQBlob @-}
 evalQBlob :: RefinedFilter Blob typ -> Blob -> Bool
@@ -144,6 +151,8 @@ getBiggerThan10 :: (BaseBackend backend ~ SqlBackend,
                    () -> ReaderT backend m [Entity Blob]
 getBiggerThan10 () = selectBlob [BlobXVal >== 10] []
 
+
+
 someFunc :: IO ()
 someFunc = runSqlite ":memory:" $ do
     runMigration migrateAll
@@ -159,7 +168,13 @@ someFunc = runSqlite ":memory:" $ do
 
     blobs <- getBiggerThan10 ()
     blobId <- insert $ Blob 10 10
+	
+    update_ blobId [RefinedUpdate BlobXVal (-1)]
+
+    update_ blobId [RefinedUpdate BlobXVal (10 - 1)]
+    
     update_ blobId [BlobXVal =# (-1)]
+    update_ blobId [BlobXVal =# 92]
 
     let x = map (\a b -> blogPostTitle b) oneJohnPost
     john <- get johnId

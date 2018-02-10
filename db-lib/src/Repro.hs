@@ -24,22 +24,20 @@ import           Database.Persist.Sqlite
 import           Database.Persist.TH
 import           Models
 
+data RefinedPersistFilter = EQUAL | LE | GE
+
+data RefinedFilter record typ = RefinedFilter
+    { refinedFilterField  :: EntityField record typ
+    , refinedFilterValue  :: typ
+    , refinedFilterFilter :: RefinedPersistFilter
+    } 
+
 {-@ data RefinedUpdate record typ = RefinedUpdate { refinedUpdateField :: EntityField record typ, refinedUpdateValue :: typ } @-}
 data RefinedUpdate record typ = RefinedUpdate 
     { refinedUpdateField :: EntityField record typ
     , refinedUpdateValue :: typ
     } 
 
-{-@ (=#) :: EntityField record a -> a -> RefinedUpdate record a @-}
-(=#) :: PersistField typ => EntityField v typ -> typ -> RefinedUpdate v typ
-x =# y = RefinedUpdate x y
+bad = RefinedUpdate BlobXVal (0  - 5)
+ok  = RefinedUpdate BlobXVal (10 - 5)
 
-toPersistentUpdate :: PersistField typ =>
-                      RefinedUpdate record typ -> Update record
-toPersistentUpdate (RefinedUpdate a b) = a =. b
-
-update_ id us = update id (map toPersistentUpdate us)
-
-test () = do
-    blobId <- insert $ Blob 10 10
-    update_ blobId [BlobXVal =# (-1)]
