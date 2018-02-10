@@ -44,9 +44,14 @@ data RefinedUpdate record typ = RefinedUpdate
     , refinedUpdateValue :: typ
     } 
 
-{-@ (=#) :: forall <p :: typ -> Bool>. PersistField typ => EntityField v (typ<p>) -> typ<p> -> RefinedUpdate v (typ<p>) @-}
+-- RJ: @Jordan, if you use the typeclass in the SIG i.e. if the HASKELL sig is 
+--   (=#) :: PersistField typ => EntityField v typ -> typ -> RefinedUpdate v typ
+-- then you need the LH sig that looks like this: 
+--   (=#) :: forall <p :: typ -> Bool>. PersistField typ => EntityField v (typ<p>) -> typ<p> -> RefinedUpdate v (typ<p>)
+-- Otherwise, just use the plain Haskell sig like below (without any classes)
+-- To see why, see the ESOP paper "abstract refinement types"
 
-(=#) :: PersistField typ => EntityField v typ -> typ -> RefinedUpdate v typ
+(=#) :: EntityField v typ -> typ -> RefinedUpdate v typ
 x =# y = RefinedUpdate x y
 
 {-@ reflect === @-}
