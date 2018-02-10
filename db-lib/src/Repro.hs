@@ -38,5 +38,6 @@ data RefinedUpdate record typ = RefinedUpdate
     , refinedUpdateValue :: typ
     } 
 
-bling = RefinedUpdate BlobXVal (0 - 5)
+bad = RefinedUpdate BlobXVal (0  - 5)
+ok  = RefinedUpdate BlobXVal (10 - 5)
 

@@ -44,6 +44,8 @@ data RefinedUpdate record typ = RefinedUpdate
     , refinedUpdateValue :: typ
     } 
 
+{-@ (=#) :: forall <p :: typ -> Bool>. PersistField typ => EntityField v (typ<p>) -> typ<p> -> RefinedUpdate v (typ<p>) @-}
+
 (=#) :: PersistField typ => EntityField v typ -> typ -> RefinedUpdate v typ
 x =# y = RefinedUpdate x y
 
@@ -163,7 +165,11 @@ someFunc = runSqlite ":memory:" $ do
     blobId <- insert $ Blob 10 10
 	
     update_ blobId [RefinedUpdate BlobXVal (-1)]
+
+    update_ blobId [RefinedUpdate BlobXVal (10 - 1)]
+    
     update_ blobId [BlobXVal =# (-1)]
+    update_ blobId [BlobXVal =# 92]
 
     let x = map (\a b -> blogPostTitle b) oneJohnPost
     john <- get johnId
