@@ -23,21 +23,10 @@ import           Database.Persist
 import           Database.Persist.Sqlite
 import           Database.Persist.TH
 import           Models
+import           BinahLibraryRepro
 
-data RefinedPersistFilter = EQUAL | LE | GE
-
-data RefinedFilter record typ = RefinedFilter
-    { refinedFilterField  :: EntityField record typ
-    , refinedFilterValue  :: typ
-    , refinedFilterFilter :: RefinedPersistFilter
-    } 
-
-{-@ data RefinedUpdate record typ = RefinedUpdate { refinedUpdateField :: EntityField record typ, refinedUpdateValue :: typ } @-}
-data RefinedUpdate record typ = RefinedUpdate 
-    { refinedUpdateField :: EntityField record typ
-    , refinedUpdateValue :: typ
-    } 
-
-bad = RefinedUpdate BlobXVal (0  - 5)
-ok  = RefinedUpdate BlobXVal (10 - 5)
-
+{-@ getEqualTo10 :: () -> ReaderT backend m [Entity {b:Blob | blobXVal b = 10}] @-}
+getEqualTo10 :: (BaseBackend backend ~ SqlBackend,
+                    PersistQueryRead backend, MonadIO m) =>
+                   () -> ReaderT backend m [Entity Blob]
+getEqualTo10 () = selectBlob [BlobXVal ==# 10] []
