@@ -28,7 +28,21 @@ import           Data.Text
 import           Web.Internal.HttpApiData
 import           Web.PathPieces
 
+{-@
+data Person = Person
+	{ personName :: String
+	, personAge :: Int Maybe
+	}
+@-}
+
+{-@
+data EntityField Person typ where 
+   Models.PersonName :: EntityField Person String
+ | Models.PersonAge :: EntityField Person Int Maybe
+ | Models.PersonId :: EntityField Person {v:_ | True}
+@-}
 {-@ assume Prelude.error :: String -> a @-} 
+
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 Person
     name String
