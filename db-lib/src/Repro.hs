@@ -23,10 +23,3 @@ import           Database.Persist
 import           Database.Persist.Sqlite
 import           Database.Persist.TH
 import           Models
-import           BinahLibraryRepro
-
-{-@ getEqualTo10 :: () -> ReaderT backend m [Entity {b:Blob | blobXVal b = 10}] @-}
-getEqualTo10 :: (BaseBackend backend ~ SqlBackend,
-                    PersistQueryRead backend, MonadIO m) =>
-                   () -> ReaderT backend m [Entity Blob]
-getEqualTo10 () = selectBlob [BlobXVal ==# 10] []

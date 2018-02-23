@@ -25,19 +25,14 @@ import           Models
 import           BinahLibrary
 
 update_ id us = update id (map toPersistentUpdate us)
-{-@ getBiggerThan10 :: () -> ReaderT backend m [Entity {b:Blob | blobXVal b >= 10}] @-}
-getBiggerThan10 :: (BaseBackend backend ~ SqlBackend,
-                    PersistQueryRead backend, MonadIO m) =>
-                   () -> ReaderT backend m [Entity Blob]
-getBiggerThan10 () = selectBlob [BlobXVal >=# 10] []
 
 
+{-@ selectNothing :: () -> ReaderT backend m [Entity {p:Person | personAge p == Nothing}] @-}
+selectNothing () = selectPerson [PersonAge ==# Nothing] []
 
 someFunc :: IO ()
 someFunc = runSqlite ":memory:" $ do
     runMigration migrateAll
 
-    blobs <- getBiggerThan10 ()
-    blobId <- insert $ Blob 10 10
-	
-    update_ blobId [BlobXVal =# 92]
+    _ <- selectNothing () 
+    return ()

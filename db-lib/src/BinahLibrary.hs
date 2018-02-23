@@ -118,43 +118,40 @@ filter f (x:xs)
   | f x         = x : filter f xs
   | otherwise   =     filter f xs
 filter _ []     = []
-{-@ reflect evalQBlobXVal @-}
-evalQBlobXVal :: RefinedPersistFilter -> Int -> Int -> Bool
-evalQBlobXVal EQUAL filter given = given== filter
-evalQBlobXVal LE filter given = given<= filter
-evalQBlobXVal GE filter given = given>= filter
-evalQBlobXVal LTP filter given = given< filter
-evalQBlobXVal GTP filter given = given> filter
-evalQBlobXVal NE filter given = given/= filter
 
-{-@ reflect evalQBlobYVal @-}
-evalQBlobYVal :: RefinedPersistFilter -> Int -> Int -> Bool
-evalQBlobYVal EQUAL filter given = given== filter
-evalQBlobYVal LE filter given = given<= filter
-evalQBlobYVal GE filter given = given>= filter
-evalQBlobYVal LTP filter given = given< filter
-evalQBlobYVal GTP filter given = given> filter
-evalQBlobYVal NE filter given = given/= filter
+{-@ reflect evalQPersonName @-}
+evalQPersonName :: RefinedPersistFilter -> String -> String -> Bool
+evalQPersonName EQUAL filter given = given == filter
+evalQPersonName LE filter given = given <= filter
+evalQPersonName GE filter given = given >= filter
+evalQPersonName LTP filter given = given < filter
+evalQPersonName GTP filter given = given > filter
+evalQPersonName NE filter given = given /= filter
 
-{-@ reflect evalQBlob @-}
-evalQBlob :: RefinedFilter Blob typ -> Blob -> Bool
-evalQBlob filter x = case refinedFilterField filter of
-    BlobXVal -> evalQBlobXVal (refinedFilterFilter filter) (refinedFilterValue filter) (blobXVal x)
-    BlobYVal -> evalQBlobYVal (refinedFilterFilter filter) (refinedFilterValue filter) (blobYVal x)
-    BlobId -> False
+{-@ reflect evalQPersonAge @-}
+evalQPersonAge :: RefinedPersistFilter -> Maybe Int -> Maybe Int -> Bool
+evalQPersonAge EQUAL filter given = given == filter
+evalQPersonAge NE filter given = given /= filter
 
-{-@ reflect evalQsBlob @-}
-evalQsBlob :: [RefinedFilter Blob typ] -> Blob -> Bool
-evalQsBlob (f:fs) x = evalQBlob f x && (evalQsBlob fs x)
-evalQsBlob [] _ = True
+{-@ reflect evalQPerson @-}
+evalQPerson :: RefinedFilter Person typ -> Person -> Bool
+evalQPerson filter x = case refinedFilterField filter of
+    PersonName -> evalQPersonName (refinedFilterFilter filter) (refinedFilterValue filter) (personName x)
+    PersonAge -> evalQPersonAge (refinedFilterFilter filter) (refinedFilterValue filter) (personAge x)
+    PersonId -> False
 
-{-@ assume selectBlob :: f:[RefinedFilter Blob typ]
-                -> [SelectOpt Blob]
-                -> Control.Monad.Trans.Reader.ReaderT backend m [Entity {v:Blob | evalQsBlob f v}] @-}
-selectBlob :: (PersistEntityBackend Blob ~ BaseBackend backend,
-      PersistEntity Blob, Control.Monad.IO.Class.MonadIO m,
+{-@ reflect evalQsPerson @-}
+evalQsPerson :: [RefinedFilter Person typ] -> Person -> Bool
+evalQsPerson (f:fs) x = evalQPerson f x && (evalQsPerson fs x)
+evalQsPerson [] _ = True
+
+{-@ assume selectPerson :: f:[RefinedFilter Person typ]
+                -> [SelectOpt Person]
+                -> Control.Monad.Trans.Reader.ReaderT backend m [Entity {v:Person | evalQsPerson f v}] @-}
+selectPerson :: (PersistEntityBackend Person ~ BaseBackend backend,
+      PersistEntity Person, Control.Monad.IO.Class.MonadIO m,
       PersistQueryRead backend, PersistField typ) =>
-      [RefinedFilter Blob typ]
-      -> [SelectOpt Blob]
-      -> Control.Monad.Trans.Reader.ReaderT backend m [Entity Blob]
-selectBlob fs ts = selectList (map toPersistentFilter fs) ts
+      [RefinedFilter Person typ]
+      -> [SelectOpt Person]
+      -> Control.Monad.Trans.Reader.ReaderT backend m [Entity Person]
+selectPerson fs ts = selectList (map toPersistentFilter fs) ts
