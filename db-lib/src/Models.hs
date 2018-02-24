@@ -31,14 +31,14 @@ import           Web.PathPieces
 {-@
 data Person = Person
 	{ personName :: String
-	, personAge :: Int Maybe
+	, personAge :: Maybe Int
 	}
 @-}
 
 {-@
 data EntityField Person typ where 
-   Models.PersonName :: EntityField Person String
- | Models.PersonAge :: EntityField Person Int Maybe
+   Models.PersonName :: EntityField Person {v:_ | True} 
+ | Models.PersonAge :: EntityField Person {v:_ | True}
  | Models.PersonId :: EntityField Person {v:_ | True}
 @-}
 {-@ assume Prelude.error :: String -> a @-} 
