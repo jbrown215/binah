@@ -1,18 +1,11 @@
-{-# LANGUAGE EmptyDataDecls             #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE GADTs                      #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE QuasiQuotes                #-}
-{-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies      #-}
 
-{-@ LIQUID "--no-adt" 	                           @-}
-{-@ LIQUID "--exact-data-con"                      @-}
-{-@ LIQUID "--higherorder"                         @-}
-{-@ LIQUID "--no-termination"                      @-}
-{-@ LIQUID "--ple" @-} 
+{-@ LIQUID "--no-adt" 	       @-}
+{-@ LIQUID "--exact-data-con"  @-}
+{-@ LIQUID "--higherorder"     @-}
+{-@ LIQUID "--no-termination"  @-}
+{-@ LIQUID "--ple"             @-} 
 
 module Lib where
 import           Prelude hiding (filter)
@@ -26,13 +19,11 @@ import           BinahLibrary
 
 update_ id us = update id (map toPersistentUpdate us)
 
-
 {-@ selectNothing :: () -> ReaderT backend m [Entity {p:Person | personAge p == Nothing}] @-}
 selectNothing () = selectPerson [PersonAge ==# Nothing] []
 
 someFunc :: IO ()
 someFunc = runSqlite ":memory:" $ do
     runMigration migrateAll
-
     _ <- selectNothing () 
     return ()
