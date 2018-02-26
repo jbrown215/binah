@@ -30,8 +30,8 @@ import           Web.PathPieces
 
 {-@
 data Person = Person
-	{ personName :: String
-	, personAge :: Maybe Int
+	{ personName :: String 
+        , personAge  :: Maybe Int
 	}
 @-}
 
