@@ -16,12 +16,11 @@ import           Database.Persist.Sqlite
 import           Database.Persist.TH
 import           Models
 import           BinahLibrary
-import 		 Data.Maybe 
 
 update_ id us = update id (map toPersistentUpdate us)
 
 {-@ selectNothing :: () -> ReaderT backend m [Entity {p:Person | personAge p == Nothing}] @-}
-selectNothing () = selectPerson [PersonAge ==# Data.Maybe.Nothing] []
+selectNothing () = selectPerson [PersonAge ==# Nothing] []
 
 someFunc :: IO ()
 someFunc = runSqlite ":memory:" $ do
