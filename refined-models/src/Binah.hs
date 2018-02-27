@@ -19,6 +19,7 @@ data Flag =
     | Proofs             -- -p, --proofs
     | DecentralizedWorld -- -d, --decentralized-world
     | CentralizedWorld   -- -c, --centralized-world
+    | Library            -- -l, --library
     deriving (Eq, Ord, Enum, Show, Bounded)
 
 version = "0.0"
@@ -29,6 +30,7 @@ help = "Usage: binah path/to/refined-models will generate the models file and mo
     ++ "  -p     Generate database program proofs\n"
     ++ "  -d     Generate decentralized world\n"
     ++ "  -c     Generate centralized world\n"
+    ++ "  -l     Generate a BinahLibrary.hs file with data accessor code\n"
 usage = "Normal usage is: binah [refined-models]\nTry --help for other options."
 
 flags =
@@ -40,8 +42,10 @@ flags =
         "Generates proofs for the models files."
     , Option ['d'] ["decentralized-world"] (NoArg DecentralizedWorld)
         "Generates the decentralized world."
-    , Option ['c'] ["entralized-world"] (NoArg CentralizedWorld)
+    , Option ['c'] ["centralized-world"] (NoArg CentralizedWorld)
         "Generates the centralized world."
+    , Option ['l'] ["library"] (NoArg Library)
+        "Generates the BinahLibrary."
     ]
 
 parse argv = case getOpt Permute flags argv of

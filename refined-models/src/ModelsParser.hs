@@ -17,6 +17,8 @@ data ListType = Id SimpleType
                 | Brackets SimpleType
                 deriving (Show)
 
+stringToSimpleType :: String -> SimpleType
+stringToSimpleType x = x
 
 toVar :: String -> Var
 toVar x = x
@@ -29,6 +31,7 @@ data Type = Refined Var String [String]
 data Stmt = NewRecord Var
           | Field Var Type
           | Deriving Var
+          | Unique Var Var
           | Blank
           deriving (Show)
 
@@ -107,6 +110,14 @@ derive =
      var <- parens identifier <|> identifier
      return $ Deriving var
 
+{- Helpers for Parsing Unique statements-}
+uniqueField :: Parser Stmt
+uniqueField =
+  do string "Unique" 
+     uniqueName <- identifier
+     fieldName <- identifier
+     return $ Unique uniqueName fieldName
+
 {- Helpers for Parsing Table and Fields -}
 field :: Parser Stmt
 field = do var <- identifier
@@ -124,7 +135,7 @@ blank = do _ <- optional $ whiteSpace
            return Blank
 
 declaration :: Parser Stmt
-declaration = (try field) <|> (try newtable) <|> (try derive) <|> blank
+declaration = (try uniqueField) <|> (try field) <|> (try newtable) <|> (try derive) <|> blank
 
 {- Parsing -}
 whileParser :: Parser Stmt
