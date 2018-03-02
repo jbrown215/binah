@@ -1,0 +1,7 @@
+User
+   email String
+   password String
+   verkey String
+   verified Bool
+   UniqueUser email
+   deriving Typeable

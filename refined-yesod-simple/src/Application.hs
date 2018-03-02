@@ -17,7 +17,6 @@ module Application
     , shutdownApp
     -- * for GHCI
     , handler
-    , db
     ) where
 
 import Control.Monad.Logger                 (liftLoc, runLoggingT)
@@ -42,7 +41,6 @@ import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
 import Handler.Common
 import Handler.Home
 import Handler.Comment
-import Handler.Profile
 
 -- This line actually creates our YesodDispatch instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see the
@@ -183,7 +181,3 @@ shutdownApp _ = return ()
 -- | Run a handler
 handler :: Handler a -> IO a
 handler h = getAppSettings >>= makeFoundation >>= flip unsafeHandler h
-
--- | Run DB queries
-db :: ReaderT SqlBackend (HandlerT App IO) a -> IO a
-db = handler . runDB

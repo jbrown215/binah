@@ -1,4 +1,4 @@
-name:    refined-yesod-proj
+name:    refined-yesod-simple
 version: "0.0.0"
 
 dependencies:
@@ -12,16 +12,12 @@ dependencies:
 
 - yesod >=1.4.3 && <1.5
 - yesod-core >=1.4.30 && <1.5
-- yesod-auth >=1.4.0 && <1.5
 - yesod-static >=1.4.0.3 && <1.6
 - yesod-form >=1.4.0 && <1.5
 - classy-prelude >=0.10.2
 - classy-prelude-conduit >=0.10.2
 - bytestring >=0.9 && <0.11
 - text >=0.11 && <2.0
-- persistent >=2.0 && <2.8
-- persistent-sqlite >=2.6.2 && <2.8
-- persistent-template >=2.0 && <2.8
 - template-haskell
 - shakespeare >=2.0 && <2.1
 - hjsmin >=0.1 && <0.3
@@ -46,6 +42,13 @@ dependencies:
 - case-insensitive
 - wai
 - foreign-store
+- persistent >=2.0 && <2.8
+- persistent-sqlite >=2.6.2 && <2.8
+- persistent-template >=2.0 && <2.8
+- template-haskell
+- http-api-data
+- path-pieces
+- transformers
 
 # The library contains all of our application code. The executable
 # defined below is just a thin wrapper.
@@ -67,7 +70,7 @@ library:
 
 # Runnable executable for our application
 executables:
-  refined-yesod-proj:
+  refined-yesod-simple:
     main: main.hs
     source-dirs: app
     ghc-options:
@@ -75,7 +78,7 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - refined-yesod-proj
+    - refined-yesod-simple
     when:
     - condition: flag(library-only)
       buildable: false
@@ -87,10 +90,9 @@ tests:
     source-dirs: test
     ghc-options: -Wall
     dependencies:
-    - refined-yesod-proj
+    - refined-yesod-simple
     - hspec >=2.0.0
     - yesod-test
-    - microlens
 
 # Define flags used by "yesod devel" to make compilation faster
 flags:

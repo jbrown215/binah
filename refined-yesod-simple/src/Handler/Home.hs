@@ -3,11 +3,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
+
+{-@ LIQUID "--no-adt" 	                           @-}
+{-@ LIQUID "--exact-data-con"                      @-}
+{-@ LIQUID "--higherorder"                         @-}
+{-@ LIQUID "--no-termination"                      @-}
+{-@ LIQUID "--ple" @-} 
 module Handler.Home where
 
 import Import
 import Yesod.Form.Bootstrap3 (BootstrapFormLayout (..), renderBootstrap3)
 import Text.Julius (RawJS (..))
+import           BinahLibrary
 
 -- Define our data that will be used for creating the form.
 data FileForm = FileForm
@@ -27,8 +34,6 @@ getHomeR = do
     (formWidget, formEnctype) <- generateFormPost sampleForm
     let submission = Nothing :: Maybe FileForm
         handlerName = "getHomeR" :: Text
-    allComments <- runDB $ getAllComments
-
     defaultLayout $ do
         let (commentFormId, commentTextareaId, commentListId) = commentIds
         aDomId <- newIdent
@@ -42,7 +47,6 @@ postHomeR = do
         submission = case result of
             FormSuccess res -> Just res
             _ -> Nothing
-    allComments <- runDB $ getAllComments
 
     defaultLayout $ do
         let (commentFormId, commentTextareaId, commentListId) = commentIds
@@ -69,5 +73,19 @@ sampleForm = renderBootstrap3 BootstrapBasicForm $ FileForm
 commentIds :: (Text, Text, Text)
 commentIds = ("js-commentForm", "js-createCommentTextarea", "js-commentList")
 
-getAllComments :: DB [Entity Comment]
-getAllComments = selectList [] [Asc CommentId]
+{-@ getBiggerThan10 :: () -> ReaderT backend m [Entity {b:Blob | blobXVal b >= 10}] @-}
+getBiggerThan10 :: (BaseBackend backend ~ SqlBackend,
+                    PersistQueryRead backend, MonadIO m) =>
+                   () -> ReaderT backend m [Entity Blob]
+getBiggerThan10 () = selectBlob [BlobXVal >=# 10] []
+
+{-@ getUserX:: String -> ReaderT backend m [Entity {u:User | userEmail u == x}] @-}
+getUserX :: (BaseBackend backend ~ SqlBackend,
+                    PersistQueryRead backend, MonadIO m) =>
+                   String -> ReaderT backend m [Entity User]
+getUserX x = selectUser [UserEmail ==# x] []
+
+update () = do
+  blobId <- insert $ Blob 10 10
+  refinedUpdate blobId [BlobXVal =# (1)]
+  return ()

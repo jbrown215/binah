@@ -1,0 +1,7 @@
+User
+   email Text
+   password Text Maybe
+   verkey Text Maybe
+   verified Bool
+   UniqueUser email
+   deriving Typeable

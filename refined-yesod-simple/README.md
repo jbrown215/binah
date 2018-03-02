@@ -20,7 +20,7 @@ As your code changes, your site will be automatically be recompiled and redeploy
 ## Tests
 
 ```
-stack test --flag refined-yesod-proj:library-only --flag refined-yesod-proj:dev
+stack test --flag refined-yesod-simple:library-only --flag refined-yesod-simple:dev
 ```
 
 (Because `yesod devel` passes the `library-only` and `dev` flags, matching those flags means you don't need to recompile between tests and development, and it disables optimization to speed up your test compile times).
