@@ -73,19 +73,8 @@ sampleForm = renderBootstrap3 BootstrapBasicForm $ FileForm
 commentIds :: (Text, Text, Text)
 commentIds = ("js-commentForm", "js-createCommentTextarea", "js-commentList")
 
-{-@ getBiggerThan10 :: () -> ReaderT backend m [Entity {b:Blob | blobXVal b >= 10}] @-}
-getBiggerThan10 :: (BaseBackend backend ~ SqlBackend,
-                    PersistQueryRead backend, MonadIO m) =>
-                   () -> ReaderT backend m [Entity Blob]
-getBiggerThan10 () = selectBlob [BlobXVal >=# 10] []
-
 {-@ getUserX:: String -> ReaderT backend m [Entity {u:User | userEmail u == x}] @-}
 getUserX :: (BaseBackend backend ~ SqlBackend,
                     PersistQueryRead backend, MonadIO m) =>
                    String -> ReaderT backend m [Entity User]
 getUserX x = selectUser [UserEmail ==# x] []
-
-update () = do
-  blobId <- insert $ Blob 10 10
-  refinedUpdate blobId [BlobXVal =# (1)]
-  return ()
