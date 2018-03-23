@@ -88,7 +88,7 @@ updateRefinement s l =
 formatDataEntry :: Set.Set String -> String -> Stmt -> String
 formatDataEntry entrySet tableName e =
   case e of
-    Field v (Simple t) _ -> "Models." ++ tableName ++ (firstCapital v) ++ " :: " ++ "EntityField " ++ tableName ++ " " ++ (typToHaskell t)
+    Field v (Simple t) _ -> "Models." ++ tableName ++ (firstCapital v) ++ " :: " ++ "EntityField " ++ tableName ++ " {v:_ | True}"
     Field v (Refined tv t refinement) _ -> "Models." ++ tableName ++ (firstCapital v) ++ " :: " ++ "EntityField " ++
                                          (if needsTableName entrySet refinement then "t:" ++ tableName
                                          else tableName) ++
