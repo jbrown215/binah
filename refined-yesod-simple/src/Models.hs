@@ -27,29 +27,23 @@ import           Data.Proxy
 import           Data.Text
 import           Web.Internal.HttpApiData
 import           Web.PathPieces
+import           Data.Typeable
 
-{-@ data User = User { userEmail :: String
-                     , userPassword :: String
-                     , userVerkey :: String
-                     , userVerified :: Bool 
-                     }
+{-@
+data Person = Person
+	{ personNumber :: {v:Int | v > 0}
+	}
 @-}
 
-{-@ data EntityField User typ where
-      Models.UserEmail :: EntityField User {v:_ | True} 
-    | Models.UserPassword :: EntityField User {v:_ | True}
-    | Models.UserVerkey :: EntityField User {v:_ | True}
-    | Models.UserVerified :: EntityField User {v:_ | True}
-    | Models.UserId :: EntityField User {v:_ | True}
-  @-}
+{-@
+data EntityField Person typ where
+   Models.PersonNumber :: EntityField Person {v:_ | v > 0}
+ | Models.PersonId :: EntityField Person {v:_ | True}
+@-}0
 
-{-@ assume Prelude.error :: String -> a @-} 
+{-@ assume Prelude.error :: String -> a @-}
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
-User
-   ~email [Char]
-   ~password [Char]
-   ~verkey [Char]
-   ~verified Bool
-   UniqueUser email
+Person
+   ~number Int
+   deriving Show
 |]
-

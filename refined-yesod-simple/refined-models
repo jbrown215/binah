@@ -1,0 +1,3 @@
+Person
+   ~number {v:Int | v > 0}
+   deriving Show

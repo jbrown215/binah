@@ -1,3 +1,4 @@
+
 {-# LANGUAGE EmptyDataDecls             #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GADTs                      #-}
@@ -12,8 +13,7 @@
 {-@ LIQUID "--exact-data-con"                      @-}
 {-@ LIQUID "--higherorder"                         @-}
 {-@ LIQUID "--no-termination"                      @-}
-{-@ LIQUID "--no-totality"                      @-}
-{-@ LIQUID "--ple" @-} 
+{-@ LIQUID "--ple" @-}
 
 module BinahLibrary where
 import           Prelude hiding (filter)
@@ -21,6 +21,7 @@ import           Control.Monad.IO.Class  (liftIO, MonadIO)
 import           Control.Monad.Trans.Reader
 import           Database.Persist
 import           Models
+import           Data.Text hiding (map, filter)
 
 data RefinedPersistFilter = EQUAL | NE | LE | LTP | GE | GTP
 
@@ -28,47 +29,47 @@ data RefinedPersistFilter = EQUAL | NE | LE | LTP | GE | GTP
     { refinedFilterField  :: EntityField record typ
     , refinedFilterValue  :: typ
     , refinedFilterFilter :: RefinedPersistFilter
-    } 
+    }
   @-}
 data RefinedFilter record typ = RefinedFilter
     { refinedFilterField  :: EntityField record typ
     , refinedFilterValue  :: typ
     , refinedFilterFilter :: RefinedPersistFilter
-    } 
+    }
 
 {-@ data RefinedUpdate record typ = RefinedUpdate
     { refinedUpdateField :: EntityField record typ
     , refinedUpdateValue :: typ } @-}
-data RefinedUpdate record typ = RefinedUpdate 
+data RefinedUpdate record typ = RefinedUpdate
     { refinedUpdateField :: EntityField record typ
     , refinedUpdateValue :: typ
-    } 
+    }
 
 (=#) :: EntityField v typ -> typ -> RefinedUpdate v typ
 x =# y = RefinedUpdate x y
 
 {-@ reflect ==# @-}
-(==#) :: (PersistEntity record, Eq typ) => 
+(==#) :: (PersistEntity record, Eq typ) =>
                  EntityField record typ -> typ -> RefinedFilter record typ
 field ==# value = RefinedFilter field value EQUAL
 
 {-@ reflect /=# @-}
-(/=#) :: (PersistEntity record, Eq typ) => 
+(/=#) :: (PersistEntity record, Eq typ) =>
                  EntityField record typ -> typ -> RefinedFilter record typ
-field /=# value = RefinedFilter field value NE 
+field /=# value = RefinedFilter field value NE
 
 {-@ reflect <=# @-}
-(<=#) :: (PersistEntity record, Eq typ) => 
+(<=#) :: (PersistEntity record, Eq typ) =>
                  EntityField record typ -> typ -> RefinedFilter record typ
 field <=# value =
   RefinedFilter {
     refinedFilterField = field
   , refinedFilterValue = value
-  , refinedFilterFilter = LE 
+  , refinedFilterFilter = LE
   }
 
 {-@ reflect <# @-}
-(<#) :: (PersistEntity record, Eq typ) => 
+(<#) :: (PersistEntity record, Eq typ) =>
                  EntityField record typ -> typ -> RefinedFilter record typ
 field <# value =
   RefinedFilter {
@@ -78,23 +79,23 @@ field <# value =
   }
 
 {-@ reflect >=# @-}
-(>=#) :: (PersistEntity record, Eq typ) => 
+(>=#) :: (PersistEntity record, Eq typ) =>
                  EntityField record typ -> typ -> RefinedFilter record typ
 field >=# value =
   RefinedFilter {
     refinedFilterField = field
   , refinedFilterValue = value
-  , refinedFilterFilter = GE 
+  , refinedFilterFilter = GE
   }
 
 {-@ reflect ># @-}
-(>#) :: (PersistEntity record, Eq typ) => 
+(>#) :: (PersistEntity record, Eq typ) =>
                  EntityField record typ -> typ -> RefinedFilter record typ
 field ># value =
   RefinedFilter {
     refinedFilterField = field
   , refinedFilterValue = value
-  , refinedFilterFilter = GE 
+  , refinedFilterFilter = GE
   }
 
 
@@ -113,6 +114,8 @@ toPersistentUpdate :: PersistField typ =>
                       RefinedUpdate record typ -> Update record
 toPersistentUpdate (RefinedUpdate a b) = a =. b
 
+refinedUpdate id us = update id (map toPersistentUpdate us)
+
 {-@ filter :: f:(a -> Bool) -> [a] -> [{v:a | f v}] @-}
 filter :: (a -> Bool) -> [a] -> [a]
 filter f (x:xs)
@@ -120,62 +123,33 @@ filter f (x:xs)
   | otherwise   =     filter f xs
 filter _ []     = []
 
-{-@ reflect evalQUserEmail @-}
-evalQUserEmail :: RefinedPersistFilter -> String -> String -> Bool
-evalQUserEmail EQUAL filter given = given == filter
-evalQUserEmail LE filter given = given <= filter
-evalQUserEmail GE filter given = given >= filter
-evalQUserEmail LTP filter given = given < filter
-evalQUserEmail GTP filter given = given > filter
-evalQUserEmail NE filter given = given /= filter
+{-@ reflect evalQPersonNumber @-}
+evalQPersonNumber :: RefinedPersistFilter -> Int -> Int -> Bool
+evalQPersonNumber EQUAL filter given = given == filter
+evalQPersonNumber LE filter given = given <= filter
+evalQPersonNumber GE filter given = given >= filter
+evalQPersonNumber LTP filter given = given < filter
+evalQPersonNumber GTP filter given = given > filter
+evalQPersonNumber NE filter given = given /= filter
 
-{-@ reflect evalQUserPassword @-}
-evalQUserPassword :: RefinedPersistFilter -> String -> String -> Bool
-evalQUserPassword EQUAL filter given = given == filter
-evalQUserPassword LE filter given = given <= filter
-evalQUserPassword GE filter given = given >= filter
-evalQUserPassword LTP filter given = given < filter
-evalQUserPassword GTP filter given = given > filter
-evalQUserPassword NE filter given = given /= filter
+{-@ reflect evalQPerson @-}
+evalQPerson :: RefinedFilter Person typ -> Person -> Bool
+evalQPerson filter x = case refinedFilterField filter of
+    PersonNumber -> evalQPersonNumber (refinedFilterFilter filter) (refinedFilterValue filter) (personNumber x)
+    PersonId -> False
 
-{-@ reflect evalQUserVerkey @-}
-evalQUserVerkey :: RefinedPersistFilter -> String -> String -> Bool
-evalQUserVerkey EQUAL filter given = given == filter
-evalQUserVerkey LE filter given = given <= filter
-evalQUserVerkey GE filter given = given >= filter
-evalQUserVerkey LTP filter given = given < filter
-evalQUserVerkey GTP filter given = given > filter
-evalQUserVerkey NE filter given = given /= filter
+{-@ reflect evalQsPerson @-}
+evalQsPerson :: [RefinedFilter Person typ] -> Person -> Bool
+evalQsPerson (f:fs) x = evalQPerson f x && (evalQsPerson fs x)
+evalQsPerson [] _ = True
 
-{-@ reflect evalQUserVerified @-}
-evalQUserVerified :: RefinedPersistFilter -> Bool -> Bool -> Bool
-evalQUserVerified EQUAL filter given = given == filter
-evalQUserVerified NE filter given = given /= filter
-
-{-@ reflect evalQUser @-}
-evalQUser :: RefinedFilter User typ -> User -> Bool
-evalQUser filter x = case refinedFilterField filter of
-    UserEmail -> evalQUserEmail (refinedFilterFilter filter) (refinedFilterValue filter) (userEmail x)
-    UserPassword -> evalQUserPassword (refinedFilterFilter filter) (refinedFilterValue filter) (userPassword x)
-    UserVerkey -> evalQUserVerkey (refinedFilterFilter filter) (refinedFilterValue filter) (userVerkey x)
-    UserVerified -> evalQUserVerified (refinedFilterFilter filter) (refinedFilterValue filter) (userVerified x)
-    UserId -> False
-
-{-@ reflect evalQsUser @-}
-evalQsUser :: [RefinedFilter User typ] -> User -> Bool
-evalQsUser (f:fs) x = evalQUser f x && (evalQsUser fs x)
-evalQsUser [] _ = True
-
-{-@ assume selectUser :: f:[RefinedFilter User typ]
-                -> [SelectOpt User]
-                -> Control.Monad.Trans.Reader.ReaderT backend m [Entity {v:User | evalQsUser f v}] @-}
-selectUser :: (PersistEntityBackend User ~ BaseBackend backend,
-      PersistEntity User, Control.Monad.IO.Class.MonadIO m,
+{-@ assume selectPerson :: f:[RefinedFilter Person typ]
+                -> [SelectOpt Person]
+                -> Control.Monad.Trans.Reader.ReaderT backend m [Entity {v:Person | evalQsPerson f v}] @-}
+selectPerson :: (PersistEntityBackend Person ~ BaseBackend backend,
+      PersistEntity Person, Control.Monad.IO.Class.MonadIO m,
       PersistQueryRead backend, PersistField typ) =>
-      [RefinedFilter User typ]
-      -> [SelectOpt User]
-      -> Control.Monad.Trans.Reader.ReaderT backend m [Entity User]
-selectUser fs ts = selectList (map toPersistentFilter fs) ts
-
-
-refinedUpdate id us = update id (map toPersistentUpdate us)
+      [RefinedFilter Person typ]
+      -> [SelectOpt Person]
+      -> Control.Monad.Trans.Reader.ReaderT backend m [Entity Person]
+selectPerson fs ts = selectList (map toPersistentFilter fs) ts
