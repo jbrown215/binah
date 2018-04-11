@@ -10,7 +10,6 @@
 
 module Field (
   EntityField (..),
-  get,
   admin
   -- set
 ) where
@@ -59,23 +58,3 @@ data Filter a typ =  Filter { filterFilter :: PersistFilter, filterField :: Enti
 
 {-@ testFilter :: Filter <{\u -> u == admin}> CreditCard String @-}
 testFilter = Filter EQUAL CreditCardHolder ""
-
-{-@ select :: forall <p :: User -> Bool>. [Filter <p> CreditCard a] -> Tagged <p> CreditCard @-}
-select :: [Filter CreditCard a] -> Tagged CreditCard
-select _ = undefined
-
-{-@ data variance EntityField covariant covariant covariant invariant @-}
-
-{-@
-get :: forall <p :: User -> Bool>.
-  EntityField <p> a b -> Tagged <p> b
-@-}
-get :: EntityField a b -> Tagged b
-get = undefined
-
-{-@ adminCreditInfo :: () -> Tagged <{\u -> u == User 0}> CreditCard @-}
-adminCreditInfo () = select [testFilter]
-
-testOutputSucceed () = output (adminCreditInfo ()) admin
-
-testOutputFail () = output (adminCreditInfo ()) (User 1)
