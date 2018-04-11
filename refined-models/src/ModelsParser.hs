@@ -11,29 +11,45 @@ import Data.Char (isSpace)
 
 {- Table Datatype -}
 type Var = String
-type SimpleType = String
-
-data ListType = Id SimpleType
-                | Brackets SimpleType
-                deriving (Show)
-
-stringToSimpleType :: String -> SimpleType
-stringToSimpleType x = x
+data OptionalType = Required String
+                | Optional String
+                deriving Show
 
 toVar :: String -> Var
 toVar x = x
 
 {- Predicate is just a list of strings right now -}
-data Type = Refined Var String [String]
-          | Simple String
+data Type = Refined Var OptionalType [String]
+          | Simple OptionalType
           deriving (Show)
 
-data Stmt = NewRecord Var
-          | Field Var Type
+data TableOptions = TableOptions { json :: Bool,
+                                   tableSql :: Maybe String
+                                 }
+                    deriving Show
+
+data FieldOptions = FieldOptions { fieldSql :: Bool,
+                                   sqltype :: Maybe String,
+                                   defaultVal :: Maybe String,
+                                   migrationOnly :: Bool
+                                 }
+                    deriving Show
+
+data Stmt = NewRecord Var TableOptions
+          | Field Var Type FieldOptions
           | Deriving Var
           | Unique Var Var
           | Blank
           deriving (Show)
+
+{- Helpers for Options -}
+defaultTableOpt = TableOptions {json=False,
+                                tableSql=Nothing}
+
+defaultFieldOpt = FieldOptions {fieldSql=False,
+                                sqltype=Nothing,
+                                defaultVal=Nothing,
+                                migrationOnly=False}
 
 {- Refined Models Language -}
 languageDef = haskellDef
@@ -44,13 +60,20 @@ parens = Token.parens lexer
 braces = Token.braces lexer
 reservedOp = Token.reservedOp lexer
 reservedName = Token.reserved lexer
-identifier = Token.identifier lexer
+ident = Token.identifier lexer
 whiteSpace = Token.whiteSpace lexer
 otherOp = Token.operator lexer
 typeOf = Token.colon lexer
 brackets = Token.brackets lexer
 integer = Token.integer lexer
 stringLit = Token.stringLiteral lexer
+
+{- Identifiers - Reserving Models Keywords -}
+identifier = do _ <- notFollowedBy (string "json")
+                x <- ident
+                return x
+
+
 
 {- Helpers for Parsing Refined Types -}
 
@@ -72,11 +95,6 @@ predicateSequence :: Parser [Var]
 predicateSequence = do list <- (many1 $ predicateString)
                        return list
 
-
-listToSimple :: ListType -> SimpleType
-listToSimple (Brackets t) = "[" ++ t ++ "]"
-listToSimple (Id t) = t
-
 refinedtype :: Parser Type
 refinedtype =
   do var <- identifier
@@ -91,17 +109,20 @@ typ :: Parser Type
 typ = (braces refinedtype)
         <|> simpletype
 
-listType :: Parser ListType
+listType :: Parser String
 listType = do typ <- brackets identifier
-              return $ Brackets typ
+              return $ "[" ++ typ ++ "]"
 
-idType :: Parser ListType
+idType :: Parser String
 idType = do typ <- identifier
-            return $ Id typ
+            return $ typ
+
 
 simpletype :: Parser Type
 simpletype = do typ <- many1 (idType <|> listType)
-                return $ Simple (intercalate " " $ map listToSimple typ)
+                return $ case last typ of
+                           "Maybe" -> Simple $ Optional $ intercalate " " $ init typ
+                           _ -> Simple $ Required $ intercalate " " typ
 
 {- Helpers for Parsing Derive Statements -}
 derive :: Parser Stmt
@@ -113,7 +134,7 @@ derive =
 {- Helpers for Parsing Unique statements-}
 uniqueField :: Parser Stmt
 uniqueField =
-  do string "Unique" 
+  do string "Unique"
      uniqueName <- identifier
      fieldName <- identifier
      return $ Unique uniqueName fieldName
@@ -122,12 +143,26 @@ uniqueField =
 field :: Parser Stmt
 field = do var <- identifier
            t <- typ
-           return $ Field var t
+           return $ Field var t (FieldOptions {fieldSql=False,
+                                               sqltype=Nothing,
+                                               defaultVal=Nothing,
+                                               migrationOnly=False})
+
 
 newtable :: Parser Stmt
-newtable = do var <- identifier
-              _ <- eof
-              return $ NewRecord var
+newtable = (try simpletable) <|> opttable
+
+simpletable :: Parser Stmt
+simpletable = do var <- identifier
+                 _ <- eof
+                 return $ NewRecord var (TableOptions {json=False, tableSql=Nothing})
+
+opttable :: Parser Stmt
+opttable = do var <- identifier
+              _ <- string "json"
+              -- TODO: get the sql options
+              return $ NewRecord var (TableOptions {json=True, tableSql=Nothing})
+
 
 blank :: Parser Stmt
 blank = do _ <- optional $ whiteSpace

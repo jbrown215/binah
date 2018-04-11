@@ -76,10 +76,10 @@ makeFields :: [Stmt] -> ([(Var, SimpleType)], [Stmt])
 makeFields [] = ([], [])
 makeFields (x:xs) =
    case x of
-    NewRecord _ -> ([], x:xs)
+    NewRecord _ _ -> ([], x:xs)
     Deriving _ -> makeFields xs
     Unique _ _ -> makeFields xs
-    Field v t ->
+    Field v t _ ->
         let (fields, xs') = makeFields xs in
         ((v, normalizeType $ toSimpleType t):(fields), xs')
 
@@ -87,20 +87,21 @@ makeRefinedFields :: [Stmt] -> ([(Var, Var, SimpleType, [String])], [Stmt])
 makeRefinedFields [] = ([], [])
 makeRefinedFields (x:xs) =
     case x of
-      NewRecord _ -> ([], x:xs)
+      Unique _ _ -> makeRefinedFields xs
+      NewRecord _ _ -> ([], x:xs)
       Deriving _ -> makeRefinedFields xs
-      Field v (Refined v' t refinements) ->
+      Field v (Refined v' t refinements) _ ->
         let (fields, xs') = makeRefinedFields xs in
-        (((v, v', t, refinements)):(fields), xs')
-      Field v  (Simple t) ->
+        (((v, v', toSimpleType (Simple t), refinements)):(fields), xs')
+      Field v  (Simple t) _ ->
         let (fields, xs') = makeRefinedFields xs in
-        (((v, toVar "_", t, ["true"])):(fields), xs')
+        (((v, toVar "_", toSimpleType (Simple t), ["true"])):(fields), xs')
 
 makeRefinedTables :: [Stmt] -> [RefinedTable]
 makeRefinedTables [] = []
 makeRefinedTables (x:xs) =
     case x of
-        NewRecord r ->
+        NewRecord r _ ->
             let (fields, xs') = makeRefinedFields xs in
             (r, fields):makeRefinedTables xs'
 
@@ -108,7 +109,7 @@ makeSimpleTables :: [Stmt] -> [SimpleTable]
 makeSimpleTables [] = []
 makeSimpleTables (x:xs) =
     case x of
-        NewRecord r ->
+        NewRecord r _ ->
             let (fields, xs') = makeFields xs in
             (r, fields):makeSimpleTables xs'
 
@@ -121,7 +122,7 @@ formatFieldEval record (field, t) =
     let funcName = "evalQ" ++ record ++ capField in
     let reflectComment = "{-@ reflect " ++ funcName ++ " @-}\n" in
     let filters = persistFilters (toType t) in
-    reflectComment ++ 
+    reflectComment ++
     funcName ++ " :: RefinedPersistFilter -> " ++ t ++ " -> " ++ t ++ " -> Bool\n" ++
     (concat (map (formatFieldCase funcName) filters)) ++ "\n"
 
@@ -172,7 +173,7 @@ makeProofs :: String -> IO ()
 makeProofs file = do stmts <- parseFile file
                      let tables = makeSimpleTables stmts
                      let proofs = (concat (map formatRecordEval tables))
-                     putStrLn proofs 
+                     putStrLn proofs
 
 makeDecentralizedWorld :: String -> IO ()
 makeDecentralizedWorld file =
@@ -188,7 +189,7 @@ formatCentralizedWorldDataDef (table, _) =
 mapInd :: (a -> Int -> b) -> [a] -> [b]
 mapInd f l = zipWith f l [0..]
 
-makeRefinedField tab set (v, v', t, refs) = 
+makeRefinedField tab set (v, v', t, refs) =
     let capTable = " canonical" ++ (capFirst tab) in
     let refs' = map (\x -> if (x == v') then (v ++ capTable) else x) refs in
     let refs'' = map (\x -> if Set.member x set then x ++ capTable else x) refs' in
@@ -200,7 +201,7 @@ makeInvariantsForTable :: RefinedTable -> String
 makeInvariantsForTable (t, fs) =
    let fields = Set.fromList (map firstPref fs) in
    let capTable = " canonical" ++ (capFirst t) in
-   "{-@ measure" ++ capTable ++ " :: " ++ (capFirst t) ++ " @-}"++ "\n\n" ++ (concat (map (makeRefinedField t fields) fs))  ++ "\n\n" 
+   "{-@ measure" ++ capTable ++ " :: " ++ (capFirst t) ++ " @-}"++ "\n\n" ++ (concat (map (makeRefinedField t fields) fs))  ++ "\n\n"
    where firstPref (a,_,_,_) = (lowFirst t) ++ (capFirst a)
 
 makeCentralizedWorld :: String -> IO ()
@@ -212,6 +213,6 @@ makeCentralizedWorld file =
     let fields = concat (mapInd (\x i -> (whitespace i) ++ (formatCentralizedWorldDataDef x)) tables)
     let dataWorld =  "data World = { " ++ fields ++
                      "             }\n"
-    putStrLn dataWorld 
+    putStrLn dataWorld
     let world = "world = World " ++ (concat (map (\(x,_) -> "canonical" ++ x ++ " ") tables)) ++ "\n"
     putStrLn world

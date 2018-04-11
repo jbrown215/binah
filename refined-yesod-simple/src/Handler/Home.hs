@@ -8,7 +8,7 @@
 {-@ LIQUID "--exact-data-con"                      @-}
 {-@ LIQUID "--higherorder"                         @-}
 {-@ LIQUID "--no-termination"                      @-}
-{-@ LIQUID "--ple" @-} 
+{-@ LIQUID "--ple" @-}
 module Handler.Home where
 
 import Import
@@ -73,8 +73,10 @@ sampleForm = renderBootstrap3 BootstrapBasicForm $ FileForm
 commentIds :: (Text, Text, Text)
 commentIds = ("js-commentForm", "js-createCommentTextarea", "js-commentList")
 
+{-
 {-@ getUserX:: String -> ReaderT backend m [Entity {u:User | userEmail u == x}] @-}
 getUserX :: (BaseBackend backend ~ SqlBackend,
                     PersistQueryRead backend, MonadIO m) =>
                    String -> ReaderT backend m [Entity User]
 getUserX x = selectUser [UserEmail ==# x] []
+-}
