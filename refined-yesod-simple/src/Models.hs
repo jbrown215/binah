@@ -29,20 +29,19 @@ import           Web.Internal.HttpApiData
 import           Web.PathPieces
 import           Data.Typeable
 
-
-{-@ embed String as Str @-}
-
 {-@
 data Person = Person
-	{ personNumber :: {v:Int | v > 0},
-          personName :: {v:String | True}
+	{ personNumber :: {v:Int | v > 0}
+	, personName :: {v:String | len v > 0}
+	, personNums :: {v:[Int] | len v > 0}
 	}
 @-}
 
 {-@
 data EntityField Person typ where
    Models.PersonNumber :: EntityField Person {v:_ | v > 0}
- | Models.PersonName :: EntityField Person {v:_ | True}
+ | Models.PersonName :: EntityField Person {v:_ | len v > 0}
+ | Models.PersonNums :: EntityField Person {v:_ | len v > 0}
  | Models.PersonId :: EntityField Person {v:_ | True}
 @-}
 
@@ -51,5 +50,6 @@ share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 Person
    ~number Int
    ~name String
+   ~nums [Int]
    deriving Show
 |]
