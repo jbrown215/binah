@@ -132,10 +132,20 @@ evalQPersonNumber LTP filter given = given < filter
 evalQPersonNumber GTP filter given = given > filter
 evalQPersonNumber NE filter given = given /= filter
 
+{-@ reflect evalQPersonName @-}
+evalQPersonName :: RefinedPersistFilter -> String -> String -> Bool
+evalQPersonName EQUAL filter given = given == filter
+evalQPersonName LE filter given = given <= filter
+evalQPersonName GE filter given = given >= filter
+evalQPersonName LTP filter given = given < filter
+evalQPersonName GTP filter given = given > filter
+evalQPersonName NE filter given = given /= filter
+
 {-@ reflect evalQPerson @-}
 evalQPerson :: RefinedFilter Person typ -> Person -> Bool
 evalQPerson filter x = case refinedFilterField filter of
     PersonNumber -> evalQPersonNumber (refinedFilterFilter filter) (refinedFilterValue filter) (personNumber x)
+    PersonName -> evalQPersonName (refinedFilterFilter filter) (refinedFilterValue filter) (personName x)
     PersonId -> False
 
 {-@ reflect evalQsPerson @-}
