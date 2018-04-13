@@ -73,10 +73,8 @@ sampleForm = renderBootstrap3 BootstrapBasicForm $ FileForm
 commentIds :: (Text, Text, Text)
 commentIds = ("js-commentForm", "js-createCommentTextarea", "js-commentList")
 
-{-
-{-@ getUserX:: String -> ReaderT backend m [Entity {u:User | userEmail u == x}] @-}
-getUserX :: (BaseBackend backend ~ SqlBackend,
+{-@ getUserX:: String -> ReaderT backend m [Entity {u:Person | personNumber u == x}] @-}
+getPerson :: (BaseBackend backend ~ SqlBackend,
                     PersistQueryRead backend, MonadIO m) =>
-                   String -> ReaderT backend m [Entity User]
-getUserX x = selectUser [UserEmail ==# x] []
--}
+                   String -> ReaderT backend m [Entity Person]
+getPerson x = selectPerson [PersonNumber ==# 1] []
