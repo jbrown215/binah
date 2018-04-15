@@ -19,9 +19,9 @@ resolver: lts-10.5
 
 allow-newer: true
 
-ghc-options:
-  "yaml": -opta-Wa,-mrelax-relocations=no
-  "persistent-sqlite": -opta-Wa,-mrelax-relocations=no
+#ghc-options:
+#  "yaml": -opta-Wa,-mrelax-relocations=no
+#  "persistent-sqlite": -opta-Wa,-mrelax-relocations=no
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
