@@ -1,6 +1,7 @@
 module ModelsParser where
 import System.IO
 import Control.Monad
+import Debug.Trace
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
@@ -11,6 +12,7 @@ import Data.Char (isSpace)
 
 {- Table Datatype -}
 type Var = String
+type Policy = String
 data OptionalType = Required String
                 | Optional String
                 deriving Show
@@ -36,7 +38,7 @@ data FieldOptions = FieldOptions { fieldSql :: Bool,
                     deriving Show
 
 data Stmt = NewRecord Var TableOptions
-          | Field Var Type FieldOptions
+          | Field Var Type Policy FieldOptions
           | Deriving Var
           | Unique Var Var
           | Blank
@@ -143,7 +145,8 @@ uniqueField =
 field :: Parser Stmt
 field = do var <- identifier
            t <- typ
-           return $ Field var t (FieldOptions {fieldSql=False,
+           policy <- option "" (between (char '{') (char '}') (many1 (noneOf ['}'])))
+           return $ Field var t policy (FieldOptions {fieldSql=False,
                                                sqltype=Nothing,
                                                defaultVal=Nothing,
                                                migrationOnly=False})

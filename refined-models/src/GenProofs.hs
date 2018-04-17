@@ -79,7 +79,7 @@ makeFields (x:xs) =
     NewRecord _ _ -> ([], x:xs)
     Deriving _ -> makeFields xs
     Unique _ _ -> makeFields xs
-    Field v t _ ->
+    Field v t _ _ ->
         let (fields, xs') = makeFields xs in
         ((v, normalizeType $ toSimpleType t):(fields), xs')
 
@@ -90,10 +90,10 @@ makeRefinedFields (x:xs) =
       Unique _ _ -> makeRefinedFields xs
       NewRecord _ _ -> ([], x:xs)
       Deriving _ -> makeRefinedFields xs
-      Field v (Refined v' t refinements) _ ->
+      Field v (Refined v' t refinements) _ _ ->
         let (fields, xs') = makeRefinedFields xs in
         (((v, v', toSimpleType (Simple t), refinements)):(fields), xs')
-      Field v  (Simple t) _ ->
+      Field v  (Simple t) _ _ ->
         let (fields, xs') = makeRefinedFields xs in
         (((v, toVar "_", toSimpleType (Simple t), ["true"])):(fields), xs')
 

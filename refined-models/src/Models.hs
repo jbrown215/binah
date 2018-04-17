@@ -26,7 +26,7 @@ makeRevGroups :: [Stmt] -> [Stmt] -> [[Stmt]]
 makeRevGroups [] acc = [acc]
 makeRevGroups (x:xs) acc = case x of
                              NewRecord _ _ -> acc : (makeRevGroups xs [x])
-                             Field _ _ _ -> makeRevGroups xs (x:acc)
+                             Field _ _ _ _ -> makeRevGroups xs (x:acc)
                              Deriving _ -> makeRevGroups xs (x:acc)
                              Unique _ _ -> makeRevGroups xs (x:acc)
 
@@ -35,8 +35,8 @@ makeGroups l = filter (not . null) . (map (Data.List.reverse)) $ makeRevGroups l
 
 toSimpleModel :: Stmt -> String
 toSimpleModel (NewRecord str _) = str ++ "\n"
-toSimpleModel (Field var (Simple typ) _) = "   " ++ var ++ " " ++ (typToModel typ) ++ "\n"
-toSimpleModel (Field var (Refined _ typ _) _) = "   " ++  var ++ " " ++ (typToModel typ) ++ "\n"
+toSimpleModel (Field var (Simple typ) _ _) = "   " ++ var ++ " " ++ (typToModel typ) ++ "\n"
+toSimpleModel (Field var (Refined _ typ _) _ _) = "   " ++  var ++ " " ++ (typToModel typ) ++ "\n"
 toSimpleModel (Deriving str) = "   deriving " ++ str ++ "\n"
 toSimpleModel (Unique n f) = "   Unique" ++ n ++ " " ++ f ++ "\n"
 
@@ -53,9 +53,9 @@ typToHaskell (Optional s) = "Maybe " ++ s
 formatRecordEntry :: String -> Stmt -> (String, String)
 formatRecordEntry tableName e =
   case e of
-    Field v (Simple t) _ -> (tableName ++ (firstCapital v) ++ " :: " ++ (typToHaskell t),
+    Field v (Simple t) _ _ -> (tableName ++ (firstCapital v) ++ " :: " ++ (typToHaskell t),
                            (tableName ++ (firstCapital v)))
-    Field v (Refined tv t refinement) _ ->
+    Field v (Refined tv t refinement) _ _ ->
       (tableName ++ (firstCapital v) ++ " :: {" ++ tv ++ ":" ++ (typToHaskell t) ++ " | " ++ (intercalate " " refinement) ++ "}",
         (tableName ++ (firstCapital v)))
 
@@ -88,8 +88,8 @@ updateRefinement s l =
 formatDataEntry :: Set.Set String -> String -> Stmt -> String
 formatDataEntry entrySet tableName e =
   case e of
-    Field v (Simple t) _ -> "Models." ++ tableName ++ (firstCapital v) ++ " :: " ++ "EntityField " ++ tableName ++ " {v:_ | True}"
-    Field v (Refined tv t refinement) _ -> "Models." ++ tableName ++ (firstCapital v) ++ " :: " ++ "EntityField " ++
+    Field v (Simple t) _ _ -> "Models." ++ tableName ++ (firstCapital v) ++ " :: " ++ "EntityField " ++ tableName ++ " {v:_ | True}"
+    Field v (Refined tv t refinement) _ _ -> "Models." ++ tableName ++ (firstCapital v) ++ " :: " ++ "EntityField " ++
                                          (if needsTableName entrySet refinement then "t:" ++ tableName
                                          else tableName) ++
                                          " {" ++ tv ++ ":_ | " ++
@@ -98,7 +98,7 @@ formatDataEntry entrySet tableName e =
 
 formatTableData :: Set.Set String -> [Stmt] -> String
 formatTableData entrySet (NewRecord tableName _ : entries) =
-  let entries' = entries ++ [Field "Id" (Refined "v" (Required "") ["True"]) defaultFieldOpt] in
+  let entries' = entries ++ [Field "Id" (Refined "v" (Required "") ["True"]) "" defaultFieldOpt] in
   "{-@\n" ++
   "data EntityField " ++
   (sentenceCase tableName) ++
