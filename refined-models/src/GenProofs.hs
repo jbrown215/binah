@@ -9,7 +9,7 @@ import Data.String.Utils
 import qualified Data.Set as Set
 import Debug.Trace
 
-type SimpleTable = (Var, [(Var, SimpleType)])
+type SimpleTable = (Var, [(Var, SimpleType, Policy)])
 type RefinedTable = (Var, [(Var, Var, SimpleType, [String])])
 
 data PersistType = TEXT | BSTRING | I64 | DOUBLE | RAT
@@ -72,16 +72,16 @@ lowFirst :: [Char] -> [Char]
 lowFirst [] = []
 lowFirst (x:xs) = ((toLower x):xs)
 
-makeFields :: [Stmt] -> ([(Var, SimpleType)], [Stmt])
+makeFields :: [Stmt] -> ([(Var, SimpleType, Policy)], [Stmt])
 makeFields [] = ([], [])
 makeFields (x:xs) =
    case x of
     NewRecord _ _ -> ([], x:xs)
     Deriving _ -> makeFields xs
     Unique _ _ -> makeFields xs
-    Field v t _ _ ->
+    Field v t p _ ->
         let (fields, xs') = makeFields xs in
-        ((v, normalizeType $ toSimpleType t):(fields), xs')
+        ((v, normalizeType $ toSimpleType t, p):(fields), xs')
 
 makeRefinedFields :: [Stmt] -> ([(Var, Var, SimpleType, [String])], [Stmt])
 makeRefinedFields [] = ([], [])
@@ -116,8 +116,8 @@ makeSimpleTables (x:xs) =
 formatFieldCase :: String -> PersistFilter -> String
 formatFieldCase funcName f = funcName ++ " " ++ (show f) ++ " filter given = given " ++ (toSymbol f) ++ " filter" ++ "\n"
 
-formatFieldEval :: Var -> (Var, SimpleType) -> String
-formatFieldEval record (field, t) =
+formatFieldEval :: Var -> (Var, SimpleType, Policy) -> String
+formatFieldEval record (field, t, _) =
     let capField = capFirst field in
     let funcName = "evalQ" ++ record ++ capField in
     let reflectComment = "{-@ reflect " ++ funcName ++ " @-}\n" in
@@ -132,12 +132,14 @@ formatCase record field =
     let lowRecord = lowFirst record in
     "    " ++ record ++ capField ++ " -> evalQ" ++ record ++ capField ++ " (refinedFilterFilter filter) (refinedFilterValue filter) (" ++ lowRecord ++ capField ++ " x)\n"
 
+fst3 (a,b,c) = a
+
 formatRecordEval :: SimpleTable -> String
 formatRecordEval (record, fields) =
     let fieldEvals = concat $ map (formatFieldEval record) fields in
     let evalRecordSig = "evalQ" ++ record ++ " :: RefinedFilter " ++ record ++ " typ -> " ++ record ++ " -> Bool\n" in
     let topCase = "evalQ" ++ record ++ " filter x = case refinedFilterField filter of\n" in
-    let cases = concat $ map (formatCase record) (map fst fields) in
+    let cases = concat $ map (formatCase record) (map fst3 fields) in
     let cases' = cases ++ "    " ++ record ++ "Id -> False" in
     let reflectComment = "{-@ reflect evalQ" ++ record ++ " @-}\n" in
     let multipleFiltersReflect = "\n\n{-@ reflect evalQs" ++ record ++ " @-}\n" in
@@ -163,6 +165,23 @@ formatRecordEval (record, fields) =
     selectSignature ++
     selectImpl ++ "\n"
 
+formatFieldFilter :: Var -> (Var, SimpleType, Policy) -> String
+formatFieldFilter record (field, t, p) =
+  let refinement = "{-@ filter" ++ (capFirst record) ++ (capFirst field) ++ " :: RefinedPersistFilter -> " in
+  -- Combining these on one line makes the GHC compiler freak out. nice.
+  let refinementPt2 = t ++ " -> Filter<{" ++ p ++ "}> " ++ (capFirst record) ++ " " ++ t in
+  let typeSig = "filter" ++ (capFirst record) ++ (capFirst field) ++ " :: RefinedPersistentFilter -> "
+                ++ t ++ " -> Filter " ++ (capFirst record) ++ " " ++ t in
+  let impl = "filter" ++ (capFirst record) ++ (capFirst field) ++ " f v = RefinedFilter " ++
+             (capFirst record) ++ (capFirst field) ++ " v f" in
+  refinement ++ refinementPt2 ++ "\n" ++
+  typeSig ++ "\n" ++
+  impl ++ "\n"
+
+
+formatFilters :: SimpleTable -> String
+formatFilters (record,fields) = concat (map (formatFieldFilter record) fields)
+
 formatDecentralizedWorld :: SimpleTable -> String
 formatDecentralizedWorld (name, _) =
     let funcName = "canonical" ++ name in
@@ -173,7 +192,8 @@ makeProofs :: String -> IO ()
 makeProofs file = do stmts <- parseFile file
                      let tables = makeSimpleTables stmts
                      let proofs = (concat (map formatRecordEval tables))
-                     putStrLn proofs
+                     let filters = (concat (map formatFilters tables))
+                     putStrLn (proofs ++ "\n" ++ filters)
 
 makeDecentralizedWorld :: String -> IO ()
 makeDecentralizedWorld file =
