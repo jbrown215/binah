@@ -81,7 +81,7 @@ selectCreditCard ::
       -> Tagged [CreditCard]
 selectCreditCard fs = undefined
 
-{-@ filterCreditCardNumber :: x:RefinedPersistFilter -> y:Int -> {z:RefinedFilter<{\u -> u == admin}> CreditCard Int @-}
+{-@ filterCreditCardNumber :: RefinedPersistFilter -> Int -> RefinedFilter<{\u -> u == admin}> CreditCard Int @-}
 filterCreditCardNumber :: RefinedPersistFilter -> Int -> RefinedFilter CreditCard Int
 filterCreditCardNumber f v = RefinedFilter CreditCardNumber v f
 
