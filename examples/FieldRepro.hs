@@ -13,24 +13,12 @@ where
 
 import Prelude hiding (sequence, mapM, filter)
 
-{-@ reflect admin @-}
-admin = User "" []
-
 {-@ data TaggedUser a <p :: User -> User -> Bool> = TaggedUser { content :: a } @-}
+{-@ data variance TaggedUser covariant contravariant @-}
 data TaggedUser a = TaggedUser { content :: a }
 
-{-@ data variance TaggedUser covariant contravariant @-}
-
-{-@ output :: forall <p :: User -> User -> Bool>.
-             msg:TaggedUser<p> a 
-          -> row:TaggedUser<p> User
-          -> User<p (content row)>
-          -> ()
-@-}
-output :: TaggedUser a -> TaggedUser User -> User -> ()
-output = undefined
-
 data RefinedPersistFilter = EQUAL
+
 {-@ data RefinedFilter record typ <p :: User -> record -> Bool> = RefinedFilter
     { refinedFilterField  :: EntityField record typ
     , refinedFilterValue  :: typ
@@ -83,38 +71,7 @@ selectUser fs = undefined
 isFriends :: User -> TaggedUser User -> Bool
 isFriends u (TaggedUser v) = elem u (userFriends v)
 
-instance Functor TaggedUser where
-  fmap f (TaggedUser x) = TaggedUser (f x)
-
-instance Applicative TaggedUser where
-  pure  = TaggedUser
-  -- f (a -> b) -> f a -> f b
-  (TaggedUser f) <*> (TaggedUser x) = TaggedUser (f x)
-
-instance Monad TaggedUser where
-  return x = TaggedUser x
-  (TaggedUser x) >>= f = f x
-  (TaggedUser _) >>  t = t
-  fail          = error
-
-{-@ instance Monad TaggedUser where
-     >>= :: forall <p :: User-> User -> Bool, f:: a -> b -> Bool>.
-            x:TaggedUser <p> a
-         -> (u:a -> TaggedUser <p> (b <f u>))
-         -> TaggedUser <p> (b<f (content x)>);
-     >>  :: x:TaggedUser a
-         -> TaggedUser b
-         -> TaggedUser b;
-     return :: forall <p :: User -> User -> Bool>. a -> TaggedUser <p> a
-  @-}
-
 -- Why is this line needed to type check?
 {-@ selectTaggedData :: () -> TaggedUser<{\v u -> friends u v}> User @-}
 selectTaggedData :: () -> TaggedUser User
 selectTaggedData () = selectUser [filterUserName EQUAL "friend"]
-
-sink () = do
-  let user = selectTaggedData ()
-  let viewer = User "" []
-  return $ if isFriends viewer user then output user user viewer else ()
-  
