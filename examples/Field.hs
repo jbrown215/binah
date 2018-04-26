@@ -21,15 +21,6 @@ data TaggedUser a = TaggedUser { content :: a }
 
 {-@ data variance TaggedUser covariant contravariant @-}
 
-{-@ output :: forall <p :: User -> User -> Bool>.
-             msg:TaggedUser<p> a 
-          -> row:TaggedUser<p> User
-          -> User<p (content row)>
-          -> ()
-@-}
-output :: TaggedUser a -> TaggedUser User -> User -> ()
-output = undefined
-
 data RefinedPersistFilter = EQUAL
 {-@ data RefinedFilter record typ <p :: User -> record -> Bool> = RefinedFilter
     { refinedFilterField  :: EntityField record typ
@@ -79,9 +70,11 @@ selectUser fs = undefined
 {-@ assume Prelude.error :: [Char] -> a @-} 
 
 {-@ measure friends :: User -> User -> Bool @-}
-{-@ assume isFriends :: forall <p :: User -> User -> Bool>. u:User -> v:TaggedUser<p> User -> {b:Bool | b <=> friends u (content v)} @-}
-isFriends :: User -> TaggedUser User -> Bool
-isFriends u (TaggedUser v) = elem u (userFriends v)
+{-@ assume isFriends :: forall <p :: User -> User -> Bool>. u:User -> v:TaggedUser<p> User -> TaggedUser<p> {b:Bool | b <=> friends u (content v)} @-}
+isFriends :: User -> TaggedUser User -> TaggedUser Bool
+isFriends u v = do
+  row <- v
+  return $ elem u (userFriends row)
 
 instance Functor TaggedUser where
   fmap f (TaggedUser x) = TaggedUser (f x)
@@ -108,13 +101,60 @@ instance Monad TaggedUser where
      return :: forall <p :: User -> User -> Bool>. a -> TaggedUser <p> a
   @-}
 
+{-@
+downgradeBool :: forall < p :: User -> User -> Bool
+                , q :: User -> User -> Bool
+                , r :: Bool -> Bool
+                >.
+       {w:: User, x:: {v:Bool<r> | v <=> true} |- User<p w> <: User<q w>}
+      x: TaggedUser <q> (Bool<r>)
+    -> TaggedUser <p> (Bool<r>)
+@-}
+downgradeBool :: TaggedUser Bool -> TaggedUser Bool
+downgradeBool (TaggedUser x) = TaggedUser x
+
+{- Policy combinators -}
+
+{-@
+ifM :: forall a < p :: User -> User -> Bool
+                , q :: User -> User -> Bool
+                , r :: Bool -> Bool
+                >.
+       {w:: User, c:: {v:Bool<r> | v <=> true} |- User<p w> <: User<q w>}
+       cond: TaggedUser <q> (Bool<r>)
+    -> thn:  TaggedUser <q> a
+    -> els:  TaggedUser <p> a
+    -> TaggedUser <p> a
+@-}
+ifM :: TaggedUser Bool -> TaggedUser a -> TaggedUser a -> TaggedUser a
+ifM cond thn els
+    = downgradeBool cond >>= \c -> if c then thn else els
+
 -- Why is this line needed to type check?
 {-@ selectTaggedData :: () -> TaggedUser<{\v u -> friends u v}> User @-}
 selectTaggedData :: () -> TaggedUser User
 selectTaggedData () = selectUser [filterUserName EQUAL "friend"]
 
-sink () = do
-  let user = selectTaggedData ()
-  let viewer = User "" []
-  return $ if isFriends viewer user then output user user viewer else ()
-  
+{-@ getOut :: User -> TaggedUser<{\v u -> friends u v}> User -> TaggedUser<{\v u -> friends u v}> [User] -> TaggedUser<{\v u -> friends u v}> [User] @-}
+getOut :: User -> TaggedUser User -> TaggedUser [User] -> TaggedUser [User]
+getOut viewer user friendsOfUser = ifM (isFriends viewer user) friendsOfUser (return [])
+
+{-@ output :: forall <p :: User -> User -> Bool>.
+             msg:TaggedUser<p> a 
+          -> row:TaggedUser<p> User
+          -> User<p (content row)>
+          -> ()
+@-}
+output :: TaggedUser a -> TaggedUser User -> User -> ()
+output = undefined
+
+
+sink () =
+  let user = selectTaggedData () in
+  let viewer = User "" [] in
+  let friendsOfUser = do
+       u <- user
+       return $ userFriends u in
+  let out = getOut viewer user friendsOfUser in
+  -- Why doesn't this line type check?
+  output out user viewer
