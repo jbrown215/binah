@@ -42,7 +42,7 @@ data User = User
      }
 @-}
 data User = User { userName :: String, userFriends :: [User] }
-    deriving Eq
+    deriving (Eq, Show)
 
 {-@
 data EntityField User typ where 
@@ -135,18 +135,22 @@ ifM cond thn els
 selectTaggedData :: () -> TaggedUser User
 selectTaggedData () = selectUser [filterUserName EQUAL "friend"]
 
-{-@ getOut :: User -> TaggedUser<{\v u -> friends u v}> User -> TaggedUser<{\v u -> friends u v}> [User] -> TaggedUser<{\v u -> friends u v}> [User] @-}
-getOut :: User -> TaggedUser User -> TaggedUser [User] -> TaggedUser [User]
-getOut viewer user friendsOfUser = ifM (isFriends viewer user) friendsOfUser (return [])
+{-@ getOut :: User -> TaggedUser<{\v u -> friends u v}> User -> TaggedUser<{\v u -> friends u v}> [User] -> TaggedUser<{\v u -> friends u v}> String @-}
+getOut :: User -> TaggedUser User -> TaggedUser [User] -> TaggedUser String 
+getOut viewer user friendsOfUser = do
+    out <- ifM (isFriends viewer user) friendsOfUser (return [])
+    return $ show out
 
-{-@ output :: forall <p :: User -> User -> Bool>.
+{-@ outputIf :: forall <p :: User -> User -> Bool>.
              msg:TaggedUser<p> a 
+          -> default: a
           -> row:TaggedUser<p> User
-          -> User<p (content row)>
+          -> cond:TaggedUser<p> Bool
+          -> User
           -> ()
 @-}
-output :: TaggedUser a -> TaggedUser User -> User -> ()
-output = undefined
+outputIf :: TaggedUser a -> a -> TaggedUser User -> TaggedUser Bool -> User -> ()
+outputIf = undefined
 
 
 sink () =
@@ -155,6 +159,4 @@ sink () =
   let friendsOfUser = do
        u <- user
        return $ userFriends u in
-  let out = getOut viewer user friendsOfUser in
-  -- Why doesn't this line type check?
-  output out user viewer
+  outputIf friendsOfUser [] user (isFriends viewer user) viewer
