@@ -70,11 +70,12 @@ selectUser fs = undefined
 {-@ assume Prelude.error :: [Char] -> a @-} 
 
 {-@ measure friends :: User -> User -> Bool @-}
-{-@ assume isFriends :: forall <p :: User -> User -> Bool>. u:User -> v:TaggedUser<p> User -> TaggedUser<p> {b:Bool | b <=> friends u (content v)} @-}
-isFriends :: User -> TaggedUser User -> TaggedUser Bool
+{-@ assume isFriends :: forall <p :: User -> User -> Bool>. u:TaggedUser<p> User -> v:TaggedUser<p> User -> TaggedUser<p> {b:Bool | b <=> friends (content u) (content v)} @-}
+isFriends :: TaggedUser User -> TaggedUser User -> TaggedUser Bool
 isFriends u v = do
-  row <- v
-  return $ elem u (userFriends row)
+  row <- u
+  viewer <- v
+  return $ elem viewer (userFriends row)
 
 instance Functor TaggedUser where
   fmap f (TaggedUser x) = TaggedUser (f x)
@@ -135,28 +136,22 @@ ifM cond thn els
 selectTaggedData :: () -> TaggedUser User
 selectTaggedData () = selectUser [filterUserName EQUAL "friend"]
 
-{-@ getOut :: User -> TaggedUser<{\v u -> friends u v}> User -> TaggedUser<{\v u -> friends u v}> [User] -> TaggedUser<{\v u -> friends u v}> String @-}
-getOut :: User -> TaggedUser User -> TaggedUser [User] -> TaggedUser String 
-getOut viewer user friendsOfUser = do
-    out <- ifM (isFriends viewer user) friendsOfUser (return [])
-    return $ show out
+{-@ output :: forall <p :: User -> User -> Bool>.
+             row:TaggedUser<p> User
+          -> viewer:TaggedUser <p> (User<p row>)
+          -> msg:TaggedUser <p> a 
+          -> () @-}
+output :: TaggedUser User -> TaggedUser User -> TaggedUser a -> ()
+output = undefined
 
-{-@ outputIf :: forall <p :: User -> User -> Bool>.
-             msg:TaggedUser<p> a 
-          -> default: a
-          -> row:TaggedUser<p> User
-          -> cond:TaggedUser<p> Bool
-          -> User
-          -> ()
-@-}
-outputIf :: TaggedUser a -> a -> TaggedUser User -> TaggedUser Bool -> User -> ()
-outputIf = undefined
+{-@ defaultFriends :: TaggedUser <{\v u -> true}> [User] @-}
+defaultFriends :: TaggedUser [User]
+defaultFriends = return []
 
-
-sink () =
+sink viewer =
   let user = selectTaggedData () in
-  let viewer = User "" [] in
   let friendsOfUser = do
        u <- user
        return $ userFriends u in
-  outputIf friendsOfUser [] user (isFriends viewer user) viewer
+  let out = ifM (isFriends user viewer) friendsOfUser defaultFriends in
+  output user viewer out
