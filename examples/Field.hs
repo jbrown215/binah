@@ -5,6 +5,7 @@
 {-@ LIQUID "--higherorder"                         @-}
 {-@ LIQUID "--no-termination"                      @-}
 {-@ LIQUID "--no-totality"                      @-}
+{-@ LIQUID "--no-pattern-inline"                @-}
 {-@ LIQUID "--ple" @-} 
 
 
