@@ -54,7 +54,7 @@ data EntityField a b where
   UserName :: EntityField User String
   UserFriends :: EntityField User [User]
 
-{-@ filterUserName:: RefinedPersistFilter -> String -> RefinedFilter<{\v u -> friends u v}> User String @-}
+{-@ filterUserName:: RefinedPersistFilter -> String -> RefinedFilter<{\u v -> friends u v}> User String @-}
 {-@ reflect filterUserName @-}
 filterUserName :: RefinedPersistFilter -> String -> RefinedFilter User String 
 filterUserName f v = RefinedFilter UserName v f
@@ -133,26 +133,70 @@ ifM cond thn els
     = downgradeBool cond >>= \c -> if c then thn else els
 
 -- Why is this line needed to type check?
-{-@ selectTaggedData :: () -> TaggedUser<{\v u -> friends u v}> User @-}
+{-@ selectTaggedData :: () -> TaggedUser<{\u v -> friends u v}> User @-}
 selectTaggedData :: () -> TaggedUser User
 selectTaggedData () = selectUser [filterUserName EQUAL "friend"]
 
-{-@ output :: forall <p :: User -> User -> Bool>.
-             row:TaggedUser<p> User
-          -> viewer:TaggedUser <p> (User<p row>)
-          -> msg:TaggedUser <p> a 
+{- q u x ==> p u (content x) -}
+
+{-@ output :: forall <p :: User -> User -> Bool, q :: User -> TaggedUser User -> Bool>.
+             {u :: User, y :: (TaggedUser<p> User)<q u> |- {v:User | v == content y} <: User<p u> }
+             row:TaggedUser<{\u v -> false}> User
+          -> viewer:(TaggedUser<p> User)<q  (content row)>
+          -> msg:TaggedUser<p> a 
           -> () @-}
 output :: TaggedUser User -> TaggedUser User -> TaggedUser a -> ()
 output = undefined
 
-{-@ defaultFriends :: TaggedUser <{\v u -> true}> [User] @-}
+{-@ defaultFriends :: TaggedUser <{\u v -> true}> [User] @-}
 defaultFriends :: TaggedUser [User]
 defaultFriends = return []
 
-sink viewer =
-  let user = selectTaggedData () in
+{-@ message :: viewer:TaggedUser <{\u v -> true}> User -> 
+               user:TaggedUser <{\u v -> friends u v}> User ->
+               TaggedUser <{\u v -> v == content viewer && u == content user}> [User] @-}
+message :: TaggedUser User -> TaggedUser User -> TaggedUser [User]
+message viewer user =
   let friendsOfUser = do
        u <- user
        return $ userFriends u in
-  let out = ifM (isFriends user viewer) friendsOfUser defaultFriends in
-  output user viewer out
+  -- let out = ifM (isFriends user viewer) friendsOfUser defaultFriends in
+  let b = downgradeBool (isFriends user viewer) in
+  do
+    c <- b
+    if c 
+      then friendsOfUser
+      else defaultFriends
+
+
+
+{-@ testOutput ::
+             row:TaggedUser<{\u v -> false}> User
+          -> viewer:(TaggedUser<{\u v -> false}> User)
+          -> msg:TaggedUser<{\u v -> u == content row && v == content viewer}> [User]
+          -> {untaggedRow:User | untaggedRow == content row}
+          -> {untaggedViewer:User | untaggedViewer == content viewer}
+          -> () @-}
+testOutput :: TaggedUser User -> TaggedUser User -> TaggedUser [User] -> User -> User -> ()
+testOutput = undefined
+
+{-@ sink :: TaggedUser <{\u v -> true}> User -> () @-}
+sink :: TaggedUser User -> ()
+sink viewer =
+  let user = selectTaggedData () in
+  let out = message viewer user in
+  -- let friendsOfUser = do
+       -- u <- user
+       -- return $ userFriends u in
+  -- -- let out = ifM (isFriends user viewer) friendsOfUser defaultFriends in
+  -- let b = isFriends user viewer in
+  -- let b' = downgradeBool b in
+  -- let out = do
+              -- c <- b'
+              -- if c 
+                -- then friendsOfUser
+                -- else defaultFriends in
+  --output user viewer out
+  let (TaggedUser untaggedViewer) = viewer in
+  let (TaggedUser untaggedRow) = user in
+  testOutput user viewer out  untaggedRow untaggedViewer
