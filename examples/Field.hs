@@ -170,12 +170,12 @@ message viewer user =
 
 
 
-{-@ testOutput ::
+{-@ testOutput :: forall <p :: User -> User -> Bool>.
              row:TaggedUser<{\u v -> false}> User
-          -> viewer:(TaggedUser<{\u v -> false}> User)
-          -> msg:TaggedUser<{\u v -> u == content row && v == content viewer}> [User]
-          -> {untaggedRow:User | untaggedRow == content row}
-          -> {untaggedViewer:User | untaggedViewer == content viewer}
+          -> viewer:(TaggedUser<p> User)
+          -> msg:TaggedUser<p> [User]
+          -> untaggedRow:User
+          -> untaggedViewer:User<p untaggedRow>
           -> () @-}
 testOutput :: TaggedUser User -> TaggedUser User -> TaggedUser [User] -> User -> User -> ()
 testOutput = undefined
