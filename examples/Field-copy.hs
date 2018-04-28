@@ -92,14 +92,14 @@ instance Monad (Tagged a) where
   fail          = error
 
 {-@ instance Monad (Tagged a) where
-     >>= :: forall <p :: User-> User -> Bool, f:: b -> c -> Bool>.
+     >>= :: forall <p :: a -> User -> Bool, f:: b -> c -> Bool>.
             x:Tagged <p> a b
          -> (u:b -> Tagged <p> a (c <f u>))
          -> Tagged <p> a (c<f (content x)>);
      >>  :: x:Tagged a b
          -> Tagged a c
          -> Tagged a c;
-     return :: forall <p :: User -> User -> Bool>. b -> Tagged<p> a b
+     return :: forall <p :: a -> User -> Bool>. b -> Tagged<p> a b
   @-}
 
 {-@
