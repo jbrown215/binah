@@ -117,86 +117,35 @@ downgradeBool (TaggedUser x) = TaggedUser x
 
 {- Policy combinators -}
 
-{-@
-ifM :: forall a < p :: User -> User -> Bool
-                , q :: User -> User -> Bool
-                , r :: Bool -> Bool
-                >.
-       {w:: User, c:: {v:Bool<r> | v <=> true} |- User<p w> <: User<q w>}
-       cond: TaggedUser <q> (Bool<r>)
-    -> thn:  TaggedUser <q> a
-    -> els:  TaggedUser <p> a
-    -> TaggedUser <p> a
-@-}
-ifM :: TaggedUser Bool -> TaggedUser a -> TaggedUser a -> TaggedUser a
-ifM cond thn els
-    = downgradeBool cond >>= \c -> if c then thn else els
+{-@ selectTaggedData1 :: () -> TaggedUser<{\u v -> friends u v}> User @-}
+selectTaggedData1 :: () -> TaggedUser User
+selectTaggedData1 () = selectUser [filterUserName EQUAL "user1"]
 
--- Why is this line needed to type check?
-{-@ selectTaggedData :: () -> TaggedUser<{\u v -> friends u v}> User @-}
-selectTaggedData :: () -> TaggedUser User
-selectTaggedData () = selectUser [filterUserName EQUAL "friend"]
+{-@ selectTaggedData2 :: () -> TaggedUser<{\u v -> friends u v}> User @-}
+selectTaggedData2 :: () -> TaggedUser User
+selectTaggedData2 () = selectUser [filterUserName EQUAL "user2"]
 
-{- q u x ==> p u (content x) -}
 
-{-@ output :: forall <p :: User -> User -> Bool, q :: User -> TaggedUser User -> Bool>.
-             {u :: User, y :: (TaggedUser<p> User)<q u> |- {v:User | v == content y} <: User<p u> }
+-- Notice that output takes a row so that we can make sure the policy
+-- held for that row
+{-@ output ::
              row:TaggedUser<{\u v -> false}> User
-          -> viewer:(TaggedUser<p> User)<q  (content row)>
-          -> msg:TaggedUser<p> a 
+          -> viewer:(TaggedUser<{\u v -> true}> User)
+          -> msg:TaggedUser<{\u v -> v == content viewer && u == content row}> a
           -> () @-}
 output :: TaggedUser User -> TaggedUser User -> TaggedUser a -> ()
 output = undefined
 
-{-@ defaultFriends :: TaggedUser <{\u v -> true}> [User] @-}
-defaultFriends :: TaggedUser [User]
-defaultFriends = return []
-
-{-@ message :: viewer:TaggedUser <{\u v -> true}> User -> 
-               user:TaggedUser <{\u v -> friends u v}> User ->
-               TaggedUser <{\u v -> v == content viewer && u == content user}> [User] @-}
-message :: TaggedUser User -> TaggedUser User -> TaggedUser [User]
-message viewer user =
-  let friendsOfUser = do
-       u <- user
-       return $ userFriends u in
-  -- let out = ifM (isFriends user viewer) friendsOfUser defaultFriends in
-  let b = downgradeBool (isFriends user viewer) in
+-- This policy needs to be parameterized by another user, since it
+-- actually depends on two users and not just one!
+-- i.e., there is no row we can pass in to make sure the
+-- policy passes for both
+{-@ bad :: () -> TaggedUser<{\u v -> friends u v}> Bool @-}
+bad :: () -> TaggedUser Bool
+bad =
+  let data1 = selectTaggedData1 () in
+  let data2 = selectTaggedData2 () in
   do
-    c <- b
-    if c 
-      then friendsOfUser
-      else defaultFriends
-
-
-
-{-@ testOutput :: forall <p :: User -> User -> Bool>.
-             row:TaggedUser<{\u v -> false}> User
-          -> viewer:(TaggedUser<p> User)
-          -> msg:TaggedUser<p> [User]
-          -> untaggedRow:User
-          -> untaggedViewer:User<p untaggedRow>
-          -> () @-}
-testOutput :: TaggedUser User -> TaggedUser User -> TaggedUser [User] -> User -> User -> ()
-testOutput = undefined
-
-{-@ sink :: TaggedUser <{\u v -> true}> User -> () @-}
-sink :: TaggedUser User -> ()
-sink viewer =
-  let user = selectTaggedData () in
-  let out = message viewer user in
-  -- let friendsOfUser = do
-       -- u <- user
-       -- return $ userFriends u in
-  -- -- let out = ifM (isFriends user viewer) friendsOfUser defaultFriends in
-  -- let b = isFriends user viewer in
-  -- let b' = downgradeBool b in
-  -- let out = do
-              -- c <- b'
-              -- if c 
-                -- then friendsOfUser
-                -- else defaultFriends in
-  --output user viewer out
-  let (TaggedUser untaggedViewer) = viewer in
-  let (TaggedUser untaggedRow) = user in
-  testOutput user viewer out  untaggedRow untaggedViewer
+    u1 <- data1
+    u2 <- data2
+    return $ data1 == data2
