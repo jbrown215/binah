@@ -67,11 +67,10 @@ selectUser fs = undefined
 {-@ assume Prelude.error :: [Char] -> a @-} 
 
 {-@ measure friends :: User -> User -> Bool @-}
-{-@ assume isFriends :: forall <p :: User -> User -> Bool>. u:User -> v:TaggedUser<p> User -> {b:Bool | b <=> friends u (content v)} @-}
+{-@ assume isFriends :: forall <p :: User -> User -> Bool>. u:User -> v:TaggedUser<p> User -> TaggedUser<p> {b:Bool | b <=> friends u (content v)} @-}
 isFriends :: User -> TaggedUser User -> Bool
 isFriends u (TaggedUser v) = elem u (userFriends v)
 
 -- Why is this line needed to type check?
-{-@ selectTaggedData :: () -> TaggedUser<{\v u -> friends u v}> User @-}
 selectTaggedData :: () -> TaggedUser User
 selectTaggedData () = selectUser [filterUserName EQUAL "friend"]

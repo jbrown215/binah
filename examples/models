@@ -1,0 +1,3 @@
+CreditCard
+  number String {\u -> u == admin}  
+  holder String {\u -> u == admin}  

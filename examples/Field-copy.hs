@@ -147,7 +147,6 @@ selectTaggedData () = selectUser [filterUserName EQUAL "friend"]
 testOutput :: Tagged a a -> Tagged a User -> Tagged a b -> a -> User -> ()
 testOutput = undefined
 
-{-@ defaultFriends :: Tagged<{\u v -> true}> User [User] @-}
 defaultFriends :: Tagged User [User]
 defaultFriends = return []
 
