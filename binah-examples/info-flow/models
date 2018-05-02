@@ -1,0 +1,4 @@
+User
+   age Int
+   email [Char]
+   password [Char]

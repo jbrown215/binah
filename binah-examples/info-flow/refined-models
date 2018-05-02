@@ -1,0 +1,5 @@
+-- Here, age and email are public, password can only be viewed by the admin
+User
+  age   {v:Int | v > 0}
+  email {v:[Char] | len v > 6}
+  password {v:[Char] | len v > 6} {\u -> u == admin}
