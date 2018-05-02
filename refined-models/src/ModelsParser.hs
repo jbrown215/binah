@@ -145,7 +145,7 @@ uniqueField =
 field :: Parser Stmt
 field = do var <- identifier
            t <- typ
-           policy <- option "\\u -> true" (between (char '{') (char '}') (many1 (noneOf ['}'])))
+           policy <- option "\\u v -> true" (between (char '{') (char '}') (many1 (noneOf ['}'])))
            return $ Field var t policy (FieldOptions {fieldSql=False,
                                                sqltype=Nothing,
                                                defaultVal=Nothing,
