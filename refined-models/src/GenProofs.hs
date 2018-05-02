@@ -10,7 +10,7 @@ import qualified Data.Set as Set
 import Debug.Trace
 
 type SimpleTable = (Var, [(Var, SimpleType, Policy)])
-type RefinedTable = (Var, [(Var, Var, SimpleType, [String])])
+type RefinedTable = (Var, [(Var, Var, SimpleType, [String], Policy)])
 
 data PersistType = TEXT | BSTRING | I64 | DOUBLE | RAT
                  | BOOL | DAY     | TOD | TIME   | LIST
@@ -32,7 +32,7 @@ toType "Day"        = DAY
 toType "TimeOfDay"  = TOD
 toType "UTCTime"    = TIME
 toType x            = if startswith "Maybe" x then MAYBE
-                      else (trace ("Error: " ++ (show x)) I64)
+                      else I64
 
 dropEnd :: Int -> [a] -> [a]
 dropEnd i xs = reverse (drop i (reverse xs))
@@ -83,19 +83,19 @@ makeFields (x:xs) =
         let (fields, xs') = makeFields xs in
         ((v, normalizeType $ toSimpleType t, p):(fields), xs')
 
-makeRefinedFields :: [Stmt] -> ([(Var, Var, SimpleType, [String])], [Stmt])
+makeRefinedFields :: [Stmt] -> ([(Var, Var, SimpleType, [String], Policy)], [Stmt])
 makeRefinedFields [] = ([], [])
 makeRefinedFields (x:xs) =
     case x of
       Unique _ _ -> makeRefinedFields xs
       NewRecord _ _ -> ([], x:xs)
       Deriving _ -> makeRefinedFields xs
-      Field v (Refined v' t refinements) _ _ ->
+      Field v (Refined v' t refinements) p _ ->
         let (fields, xs') = makeRefinedFields xs in
-        (((v, v', toSimpleType (Simple t), refinements)):(fields), xs')
-      Field v  (Simple t) _ _ ->
+        (((v, v', normalizeType $ toSimpleType (Simple t), refinements, p)):(fields), xs')
+      Field v  (Simple t) p _ ->
         let (fields, xs') = makeRefinedFields xs in
-        (((v, toVar "_", toSimpleType (Simple t), ["true"])):(fields), xs')
+        (((v, toVar "_", normalizeType $ toSimpleType (Simple t), ["true"], p)):(fields), xs')
 
 makeRefinedTables :: [Stmt] -> [RefinedTable]
 makeRefinedTables [] = []
@@ -132,6 +132,21 @@ formatCase record field =
     let lowRecord = lowFirst record in
     "    " ++ record ++ capField ++ " -> evalQ" ++ record ++ capField ++ " (refinedFilterFilter filter) (refinedFilterValue filter) (" ++ lowRecord ++ capField ++ " x)\n"
 
+formatGet :: Var -> (Var, SimpleType, Policy) -> String
+formatGet table (field, ty, policy) =
+  let t = "(" ++ ty ++ ")" in
+  let funcName = "get" ++ (capFirst table) ++ (capFirst field) in
+  let tagged = "Tagged" ++ (capFirst table) in
+  let refinement = "{-@ " ++ funcName ++ " :: forall <p :: " ++ table ++ " -> User -> Bool, q :: " ++ table ++ " -> User -> Bool>.\n"
+                   ++ "    {w :: " ++ table ++ " |- User<q w> <: User<{" ++ policy ++ "}>}\n"
+                   ++ "    {w :: " ++ table ++ " |- User<q w> <: User<p w>}\n"
+                   ++ "    " ++ tagged ++ "<p> " ++ table ++ " -> " ++ tagged ++ "<q> " ++ t ++ "\n"
+                   ++ "@-}\n" in
+  let typeSig = funcName ++ " :: " ++ tagged ++ " " ++ table ++ " -> " ++ tagged ++ " " ++ t ++ "\n" in
+  let impl = funcName ++ " (" ++ tagged ++ " x) = " ++ tagged ++ " $ " ++ (lowFirst table) ++ (capFirst field) ++ " x" in
+  refinement ++ typeSig ++ impl ++ "\n\n"
+
+
 fst3 (a,b,c) = a
 
 formatRecordEval :: SimpleTable -> String
@@ -146,18 +161,18 @@ formatRecordEval (record, fields) =
     let multipleFiltersSig = "evalQs" ++ record ++ " :: [RefinedFilter " ++ record ++ " typ] -> " ++ record ++ " -> Bool\n" in
     let multipleFiltersBody = "evalQs" ++ record ++ " (f:fs) x = evalQ" ++ record ++ " f x && (evalQs" ++ record ++ " fs x)\n" in
     let multipleFiltersDefault = "evalQs" ++ record ++ " [] _ = True\n" in
-    let selectRefinement = "{-@ assume select" ++ record ++ " :: f:[RefinedFilter " ++ record ++ " typ]\n"
+    let selectRefinement = "{-@ assume select" ++ record ++ " :: forall <p :: "++ record ++ " -> User -> Bool>. f:[RefinedFilter<p> " ++ record ++ " typ]\n"
                         ++ "                -> [SelectOpt " ++ record ++ "]\n"
-                        ++ "                -> Control.Monad.Trans.Reader.ReaderT backend m [Entity {v:"
-                        ++ record ++ " | evalQs" ++ record ++ " f v}] @-}\n" in
+                        ++ "                -> Control.Monad.Trans.Reader.ReaderT backend m (Tagged" ++ record ++ "<p> [Entity {v:"
+                        ++ record ++ " | evalQs" ++ record ++ " f v}]) @-}\n" in
     let selectSignature = "select" ++ record ++ " :: (PersistEntityBackend " ++ record ++ " ~ BaseBackend backend,\n"
                        ++ "      PersistEntity " ++ record ++ ", Control.Monad.IO.Class.MonadIO m,\n"
                        ++ "      PersistQueryRead backend, PersistField typ) =>\n"
                        ++ "      [RefinedFilter " ++ record ++ " typ]\n"
                        ++ "      -> [SelectOpt " ++ record ++ "]\n"
-                       ++ "      -> Control.Monad.Trans.Reader.ReaderT backend m [Entity " ++ record ++ "]\n"
+                       ++ "      -> Control.Monad.Trans.Reader.ReaderT backend m (Tagged" ++ record ++ " [Entity " ++ record ++ "])\n"
     in
-    let selectImpl = "select" ++ record ++ " fs ts = selectList (map toPersistentFilter fs) ts" in
+    let selectImpl = "select" ++ record ++ " fs ts = selectList (map toPersistentFilter fs) ts >>= return . Tagged" ++ record in
     fieldEvals ++ reflectComment ++ evalRecordSig ++ topCase ++ cases' ++
     multipleFiltersReflect ++ multipleFiltersSig ++ multipleFiltersBody ++
     multipleFiltersDefault ++ "\n" ++
@@ -165,74 +180,37 @@ formatRecordEval (record, fields) =
     selectSignature ++
     selectImpl ++ "\n"
 
-formatFieldFilter :: Var -> (Var, SimpleType, Policy) -> String
-formatFieldFilter record (field, t, p) =
+formatFieldFilter :: Var -> (Var, Var, SimpleType, [String], Policy) -> String
+formatFieldFilter record (field, tname, t, refinements, p) =
   let refinement = "{-@ filter" ++ (capFirst record) ++ (capFirst field) ++ " :: RefinedPersistFilter -> " in
   -- Combining these on one line makes the GHC compiler freak out. nice.
-  let refinementPt2 = t ++ " -> Filter<{" ++ p ++ "}> " ++ (capFirst record) ++ " " ++ t in
-  let typeSig = "filter" ++ (capFirst record) ++ (capFirst field) ++ " :: RefinedPersistentFilter -> "
-                ++ t ++ " -> Filter " ++ (capFirst record) ++ " " ++ t in
+  let refinementPt2 = if tname == "_" then
+                           t
+                           ++ " -> RefinedFilter<{" ++ p ++ "}> " ++ (capFirst record)
+                           ++ " (" ++ t  ++ ") @-}"
+                      else "{" ++ tname ++ ":" ++ t ++ " | " ++ (intercalate " " refinements)
+                           ++ "} -> RefinedFilter<{" ++ p ++ "}> " ++ (capFirst record)
+                           ++ " (" ++ t  ++ ") @-}" in
+  let reflection = "{-@ reflect filter" ++ (capFirst record) ++ (capFirst field) ++ " @-}" in
+  let typeSig = "filter" ++ (capFirst record) ++ (capFirst field) ++ " :: RefinedPersistFilter -> "
+                ++ t ++ " -> RefinedFilter " ++ (capFirst record) ++ " (" ++ t ++ ")" in
   let impl = "filter" ++ (capFirst record) ++ (capFirst field) ++ " f v = RefinedFilter " ++
              (capFirst record) ++ (capFirst field) ++ " v f" in
   refinement ++ refinementPt2 ++ "\n" ++
+  reflection ++ "\n" ++
   typeSig ++ "\n" ++
-  impl ++ "\n"
+  impl ++ "\n\n"
 
-
-formatFilters :: SimpleTable -> String
+formatFilters :: RefinedTable -> String
 formatFilters (record,fields) = concat (map (formatFieldFilter record) fields)
 
-formatDecentralizedWorld :: SimpleTable -> String
-formatDecentralizedWorld (name, _) =
-    let funcName = "canonical" ++ name in
-    let comment = "{-@ reflect " ++ funcName ++ " @-}\n" in
-    comment ++ funcName ++ " = undefined\n\n"
+formatGets :: SimpleTable -> String
+formatGets (record, fields) = concat (map (formatGet record) fields)
 
 makeProofs :: String -> IO ()
 makeProofs file = do stmts <- parseFile file
                      let tables = makeSimpleTables stmts
                      let proofs = (concat (map formatRecordEval tables))
-                     let filters = (concat (map formatFilters tables))
-                     putStrLn (proofs ++ "\n" ++ filters)
-
-makeDecentralizedWorld :: String -> IO ()
-makeDecentralizedWorld file =
- do stmts <- parseFile file
-    -- let tables = makeSimpleTables stmts
-    --putStrLn (concat (map formatDecentralizedWorld tables))
-    putStrLn (concat (map makeInvariantsForTable (makeRefinedTables stmts)))
-
-formatCentralizedWorldDataDef :: SimpleTable -> String
-formatCentralizedWorldDataDef (table, _) =
-    "canonical" ++ table ++ " :: " ++ table ++ "\n"
-
-mapInd :: (a -> Int -> b) -> [a] -> [b]
-mapInd f l = zipWith f l [0..]
-
-makeRefinedField tab set (v, v', t, refs) =
-    let capTable = " canonical" ++ (capFirst tab) in
-    let refs' = map (\x -> if (x == v') then (v ++ capTable) else x) refs in
-    let refs'' = map (\x -> if Set.member x set then x ++ capTable else x) refs' in
-    let funcName = (lowFirst tab) ++ "_invariant_" ++ v in
-    "{-@ assume " ++ funcName ++ " :: {v:() | " ++ (intercalate " " refs'')++ "} @-}\n"
-    ++ funcName ++ " :: ()\n" ++ funcName ++ " = ()\n\n"
-
-makeInvariantsForTable :: RefinedTable -> String
-makeInvariantsForTable (t, fs) =
-   let fields = Set.fromList (map firstPref fs) in
-   let capTable = " canonical" ++ (capFirst t) in
-   "{-@ measure" ++ capTable ++ " :: " ++ (capFirst t) ++ " @-}"++ "\n\n" ++ (concat (map (makeRefinedField t fields) fs))  ++ "\n\n"
-   where firstPref (a,_,_,_) = (lowFirst t) ++ (capFirst a)
-
-makeCentralizedWorld :: String -> IO ()
-makeCentralizedWorld file =
- do stmts <- parseFile file
-    let tables = makeSimpleTables stmts
-    putStrLn (concat (map formatDecentralizedWorld tables))
-    let whitespace i = if i == 0 then "" else "             , "
-    let fields = concat (mapInd (\x i -> (whitespace i) ++ (formatCentralizedWorldDataDef x)) tables)
-    let dataWorld =  "data World = { " ++ fields ++
-                     "             }\n"
-    putStrLn dataWorld
-    let world = "world = World " ++ (concat (map (\(x,_) -> "canonical" ++ x ++ " ") tables)) ++ "\n"
-    putStrLn world
+                     let filters = (concat (map formatFilters (makeRefinedTables stmts)))
+                     let gets = (concat (map formatGets (makeSimpleTables stmts)))
+                     putStrLn (proofs ++ "\n" ++ filters ++ "\n" ++ gets)
