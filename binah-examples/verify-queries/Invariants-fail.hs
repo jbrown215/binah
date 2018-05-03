@@ -138,3 +138,16 @@ selectUser fs = undefined
 {-@ selectUsersOver42 :: () -> [{u:User | userAge u >= 42}] @-}
 selectUsersOver42 :: () -> [User]
 selectUsersOver42 () = selectUser [UserAge >== 40]
+
+{-@ selectUsersWithEmail :: email:{v:[Char] | len v > 6} -> [{u:User | userEmail u != email}] @-}
+selectUsersWithEmail :: [Char] -> [User]
+selectUsersWithEmail e = selectUser [UserEmail === e]
+
+{-@ selectUsersWithEmailPassword :: 
+      email:{v:[Char] | len v > 6}
+   -> password:{v:[Char] | len v > 6}
+   -> [{v:User | userEmail v == email && userPassword v != password}]
+@-}
+selectUsersWithEmailPassword :: [Char] -> [Char] -> [User]
+selectUsersWithEmailPassword email pass =
+    selectUser [UserEmail === email, UserPassword === pass]
