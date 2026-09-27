@@ -1,0 +1,124 @@
+# Kept up to date by the Brown Software Factory's GitHub app; don't edit.
+# Settings live in .github/software-factory.yml.
+# Adding the trigger label to an issue starts work on it (so does opening
+# one, for filers on the auto-work list); requesting changes on a factory
+# pull request (branch factory/issue-N) makes the agent revise it. Change the
+# label in both this file and .github/software-factory.yml.
+name: Brown Software Factory
+
+on:
+  issues:
+    types: [opened, labeled]
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  work:
+    if: github.event_name == 'issues' && (github.event.action == 'opened' || (github.event.action == 'labeled' && github.event.label.name == 'factory'))
+    concurrency:
+      group: software-factory-factory/issue-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          # The agent must not be able to push; the orchestrator pushes itself.
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Set up the factory
+        run: |
+          mkdir -p "$RUNNER_TEMP/factory"
+          cp .factory/bin/factory.mjs "$RUNNER_TEMP/factory/factory.mjs"
+
+      - name: Decide whether to work on this issue
+        id: gate
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          EVENT_ACTION: ${{ github.event.action }}
+          EVENT_LABEL: ${{ github.event.label.name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node "$RUNNER_TEMP/factory/factory.mjs" gate --issue "$ISSUE_NUMBER" --action "$EVENT_ACTION" --label "$EVENT_LABEL"
+
+      - name: Install Claude Code
+        if: steps.gate.outputs.go == 'true'
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run the factory
+        if: steps.gate.outputs.go == 'true'
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          EVENT_ACTION: ${{ github.event.action }}
+          EVENT_LABEL: ${{ github.event.label.name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          FACTORY_UPSTREAM_TOKEN: ${{ secrets.FACTORY_UPSTREAM_TOKEN }}
+        run: node "$RUNNER_TEMP/factory/factory.mjs" run-issue --issue "$ISSUE_NUMBER" --trigger "${{ steps.gate.outputs.trigger }}"
+
+      # If the run crashed, timed out or was cancelled, don't leave the issue
+      # looking busy forever.
+      - name: Mark the issue if the run stopped
+        if: failure() || cancelled()
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          EVENT_ACTION: ${{ github.event.action }}
+          EVENT_LABEL: ${{ github.event.label.name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FACTORY_UPSTREAM_TOKEN: ${{ secrets.FACTORY_UPSTREAM_TOKEN }}
+        run: node "$RUNNER_TEMP/factory/factory.mjs" mark-stopped --issue "$ISSUE_NUMBER"
+
+  revise:
+    if: github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested' && startsWith(github.event.pull_request.head.ref, 'factory/issue-') && github.event.pull_request.head.repo.full_name == github.repository
+    concurrency:
+      group: software-factory-${{ github.event.pull_request.head.ref }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          # The agent must not be able to push; the orchestrator pushes itself.
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Set up the factory
+        run: |
+          mkdir -p "$RUNNER_TEMP/factory"
+          cp .factory/bin/factory.mjs "$RUNNER_TEMP/factory/factory.mjs"
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run the factory
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REVIEW_ID: ${{ github.event.review.id }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          FACTORY_UPSTREAM_TOKEN: ${{ secrets.FACTORY_UPSTREAM_TOKEN }}
+        run: node "$RUNNER_TEMP/factory/factory.mjs" run-review --pr "$PR_NUMBER" --review "$REVIEW_ID"
+
+      # If the run crashed, timed out or was cancelled, don't leave the issue
+      # looking busy forever.
+      - name: Mark the issue if the run stopped
+        if: failure() || cancelled()
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REVIEW_ID: ${{ github.event.review.id }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FACTORY_UPSTREAM_TOKEN: ${{ secrets.FACTORY_UPSTREAM_TOKEN }}
+        run: node "$RUNNER_TEMP/factory/factory.mjs" mark-stopped --pr "$PR_NUMBER"

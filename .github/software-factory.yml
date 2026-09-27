@@ -1,0 +1,82 @@
+# gh-issue-software-factory configuration.
+# Every key is optional; the values below are the defaults.
+
+# Adding this label to an issue starts work on it.
+triggerLabel: factory
+
+labels:
+  working: "factory: working"
+  blocked: "factory: blocked"
+  done: "factory: done"
+  digest: "factory: digest"
+  # Records who filed an issue: "from: dad". Only trusted parties can set it.
+  filerPrefix: "from: "
+
+# Issues that start work as soon as they're opened, with no label. Empty
+# lists (the default) mean every issue waits for the trigger label.
+autoWork:
+  authors: []  # GitHub usernames, e.g. [dads-github-name]
+  filers: []   # names from the filer label, e.g. [dads-app]
+  reporters: [] # your site's user IDs, for reports from the bug button
+
+# The GitHub account whose token your site's bug button uses. Its issues are
+# credited to the signed-in reporter the button records, not to the account.
+reporting:
+  filerAccounts: []
+
+# The Factory Office's bot account. "Ask for changes" on the desk arrives as
+# its review, credited to whoever signed in to the desk.
+desk:
+  accounts: ["brown-software-factory[bot]"]
+
+# Report crashes of the factory itself as issues in the framework's repo.
+# Needs a FACTORY_UPSTREAM_TOKEN secret that can create issues there.
+upstream: {}
+  # repo: your-org/gh-issue-software-factory
+  # filer: this-app
+
+delivery:
+  # push: commit straight to baseBranch once the review approves.
+  # pr: open a pull request against baseBranch instead.
+  mode: pr
+  baseBranch: main
+
+# Commands that must pass before the review step, e.g. "npm ci && npm test".
+# A failure is sent back to the agent to fix, like a review finding.
+checks: []
+
+review:
+  # Fix rounds before the agent gives up and asks for help.
+  maxRounds: 2
+
+claude:
+  # model: claude-sonnet-5
+  timeoutMinutes: 30
+
+# A daily issue summarizing open work and the decisions waiting on you.
+# Off in repos the Factory Office serves: its daily email and desk replace it.
+# After changing enabled or cron, run `init --force` to update the workflow.
+digest:
+  enabled: false
+  cron: "47 12 * * *"  # UTC
+  mention: [jbrown215]
+  skipWhenEmpty: true
+
+# Before/after screenshots of the pages a change affects, for web apps.
+# The app is started twice on the runner: at the old code and the new code.
+screenshots:
+  enabled: false
+  # setup: npm ci
+  # start: npm run dev -- --port 4173
+  # url: http://localhost:4173
+  paths: ["/"]  # used when the agent doesn't name the affected pages
+  readyTimeoutSeconds: 120
+  # viewports default to desktop (1280x800) and mobile (390x844)
+
+# A pixel-art animation on every delivered issue: lasers for bug fixes, a
+# new assembly line for features.
+celebrations: true
+
+# Extra guidance for the agent on every issue, e.g. how to run the tests.
+# instructions: |
+#   Run `npm test` before finishing.
